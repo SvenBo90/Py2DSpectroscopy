@@ -27,3 +27,8 @@ The first data format is a simple .txt file. The first line of the file gives th
 
 The second data format is a .dat file that comes along with .asc spectra files. The .dat includes a table, where the first, second and third column are the pixel number, the x pixel position and the y pixel position, respectively. Further columns can give information on temperature, excitation power or similar quantities measured during the scanning. The spectra file have the format spectrum_X_Y.asc and include a column for the wavelength and a column for the counts. An example map can be downloaded: https://drive.google.com/open?id=0B-hxzhGGvvMSUHJ6SWg3NndUVEE
 
+# Screenshots
+![Screenshot 1](https://lh3.googleusercontent.com/w7rQhxnLIY6R0kJ6gCxGH5c54t4PdR-_cLtDtHhVn85G7IKbJsei9rLbnj1FmLYNd23k699xnQmFYcQ=w1309-h673 "Screenshot 1")
+
+![Screenshot 2](https://lh6.googleusercontent.com/wjkEal3tY6PnwDpBIk5cyRV0Ian0JX-3C1JTvYUTg2G3zgZg40dms_BlnXuJNo5zQMu4Yd18rHFDQfY=w1309-h673 "Screenshot 2")
+
