@@ -500,7 +500,7 @@ class FittingWidget(QWidget):
                                     message_box.addButton('Stop Fitting', QMessageBox.AcceptRole)
                                     message_box.exec_()
                                     if message_box.result() == 1:
-                                        self.progress_dialog.close()
+                                        progress_dialog.close()
                                         return
 
                             # update data selection box
