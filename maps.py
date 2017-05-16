@@ -501,9 +501,11 @@ class Map2D(Map):
 
         # sort data names dictionary again
         i_data = 0
+        data_names = {}
         for key in self._data_names.keys():
-            self._data_names[i_data] = self._data_names.pop(key)
+            data_names[i_data] = self._data_names[key]
             i_data += 1
+        self._data_names = data_names
 
         # create variables for the fit data
         self._fit_functions = numpy.zeros((self._nx, self._ny, 6))
