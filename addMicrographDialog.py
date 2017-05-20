@@ -23,7 +23,6 @@ class AddMicrographDialog(QDialog):
         QDialog.__init__(self, parent)
 
         # link app
-        # noinspection PyArgumentList
         self._app = QApplication.instance()
 
         # link map
@@ -37,14 +36,14 @@ class AddMicrographDialog(QDialog):
         self.ui = UiAddMicrographDialog(self)
 
         # link actions for dialog buttons
-        self.ui.clear_last_fixed_button.clicked.connect(self.cb_clear_last_fixed)
-        self.ui.clear_all_fixed_button.clicked.connect(self.cb_clear_all_fixed)
-        self.ui.clear_last_moving_button.clicked.connect(self.cb_clear_last_moving)
-        self.ui.clear_all_moving_button.clicked.connect(self.cb_clear_all_moving)
+        self.ui.clear_last_fixed_push_button.clicked.connect(self.cb_clear_last_fixed)
+        self.ui.clear_all_fixed_push_button.clicked.connect(self.cb_clear_all_fixed)
+        self.ui.clear_last_moving_push_button.clicked.connect(self.cb_clear_last_moving)
+        self.ui.clear_all_moving_push_button.clicked.connect(self.cb_clear_all_moving)
 
         # link and disable submit button
-        self._ok_button = self.ui.button_box.button(self.ui.button_box.Ok)
-        self._ok_button.setEnabled(False)
+        self._ok_push_button = self.ui.button_box.button(self.ui.button_box.Ok)
+        self._ok_push_button.setEnabled(False)
 
         # create map canvas
         self._micro_canvas = MicrographCanvas(self._map.get_data(), self._map.get_data_name(), file_name,
@@ -63,14 +62,14 @@ class AddMicrographDialog(QDialog):
         self._points_fixed = numpy.array([])
 
         # disable buttons for fixed point removing
-        self.ui.clear_all_fixed_button.setEnabled(False)
-        self.ui.clear_last_fixed_button.setEnabled(False)
+        self.ui.clear_all_fixed_push_button.setEnabled(False)
+        self.ui.clear_last_fixed_push_button.setEnabled(False)
 
         # update the canvas
         self._micro_canvas.update_points(self._points_fixed, self._points_moving)
 
         # disable the submit button
-        self._ok_button.setEnabled(False)
+        self._ok_push_button.setEnabled(False)
 
     def cb_clear_all_moving(self):
 
@@ -78,14 +77,14 @@ class AddMicrographDialog(QDialog):
         self._points_moving = numpy.array([])
 
         # disable buttons for moving points removing
-        self.ui.clear_all_moving_button.setEnabled(False)
-        self.ui.clear_last_moving_button.setEnabled(False)
+        self.ui.clear_all_moving_push_button.setEnabled(False)
+        self.ui.clear_last_moving_push_button.setEnabled(False)
 
         # update the canvas
         self._micro_canvas.update_points(self._points_fixed, self._points_moving)
 
         # disable the submit button
-        self._ok_button.setEnabled(False)
+        self._ok_push_button.setEnabled(False)
 
     def cb_clear_last_fixed(self):
 
@@ -94,17 +93,17 @@ class AddMicrographDialog(QDialog):
 
         # check if this was the only point and disable buttons for fixed points removing
         if len(self._points_fixed) == 0:
-            self.ui.clear_all_fixed_button.setEnabled(False)
-            self.ui.clear_last_fixed_button.setEnabled(False)
+            self.ui.clear_all_fixed_push_button.setEnabled(False)
+            self.ui.clear_last_fixed_push_button.setEnabled(False)
 
         # update micro canvas
         self._micro_canvas.update_points(self._points_fixed, self._points_moving)
 
         # check if the submit button should be enabled or disabled
         if len(self._points_fixed) == len(self._points_moving) and len(self._points_fixed) > 2:
-            self._ok_button.setEnabled(True)
+            self._ok_push_button.setEnabled(True)
         else:
-            self._ok_button.setEnabled(False)
+            self._ok_push_button.setEnabled(False)
 
     def cb_clear_last_moving(self):
 
@@ -113,17 +112,17 @@ class AddMicrographDialog(QDialog):
 
         # check if this was the only one and disable buttons for moving points removing
         if len(self._points_moving) == 0:
-            self.ui.clear_all_moving_button.setEnabled(False)
-            self.ui.clear_last_moving_button.setEnabled(False)
+            self.ui.clear_all_moving_push_button.setEnabled(False)
+            self.ui.clear_last_moving_push_button.setEnabled(False)
 
         # update canvas
         self._micro_canvas.update_points(self._points_fixed, self._points_moving)
 
         # check whether submit button should be enabled or disabled
         if len(self._points_fixed) == len(self._points_moving) and len(self._points_fixed) > 2:
-            self._ok_button.setEnabled(True)
+            self._ok_push_button.setEnabled(True)
         else:
-            self._ok_button.setEnabled(False)
+            self._ok_push_button.setEnabled(False)
 
     def cb_map_clicked(self, event):
 
@@ -150,25 +149,25 @@ class AddMicrographDialog(QDialog):
 
             # enable or disable buttons for fixed points removing
             if len(self._points_fixed) > 0:
-                self.ui.clear_all_fixed_button.setEnabled(True)
-                self.ui.clear_last_fixed_button.setEnabled(True)
+                self.ui.clear_all_fixed_push_button.setEnabled(True)
+                self.ui.clear_last_fixed_push_button.setEnabled(True)
             else:
-                self.ui.clear_all_fixed_button.setEnabled(False)
-                self.ui.clear_last_fixed_button.setEnabled(False)
+                self.ui.clear_all_fixed_push_button.setEnabled(False)
+                self.ui.clear_last_fixed_push_button.setEnabled(False)
 
             # enable or disable buttons for moving points removing
             if len(self._points_moving) > 0:
-                self.ui.clear_all_moving_button.setEnabled(True)
-                self.ui.clear_last_moving_button.setEnabled(True)
+                self.ui.clear_all_moving_push_button.setEnabled(True)
+                self.ui.clear_last_moving_push_button.setEnabled(True)
             else:
-                self.ui.clear_all_moving_button.setEnabled(False)
-                self.ui.clear_last_moving_button.setEnabled(False)
+                self.ui.clear_all_moving_push_button.setEnabled(False)
+                self.ui.clear_last_moving_push_button.setEnabled(False)
 
             # enable or disable submit button
             if len(self._points_fixed) == len(self._points_moving) and len(self._points_fixed) > 2:
-                self._ok_button.setEnabled(True)
+                self._ok_push_button.setEnabled(True)
             else:
-                self._ok_button.setEnabled(False)
+                self._ok_push_button.setEnabled(False)
 
     def get_points_fixed(self):
 

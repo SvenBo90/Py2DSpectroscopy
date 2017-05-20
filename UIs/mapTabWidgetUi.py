@@ -22,9 +22,9 @@ class UiMapTabWidget(object):
 
         # create toolbar widget
         self.toolbar_widget = QWidget(map_tab_widget)
-        self.toolbar_widget.setGeometry(QRect(10, 365, 400, 50))
+        self.toolbar_widget.setGeometry(QRect(10, 350, 450, 80))
         self.toolbar_widget.setObjectName("toolbarWidget")
 
         # data selection box
-        self.data_selection_box = QComboBox(map_tab_widget)
-        self.data_selection_box.setGeometry(QRect(415, 370, 195, 30))
+        self.data_selection_combo_box = QComboBox(map_tab_widget)
+        self.data_selection_combo_box.setGeometry(QRect(460, 360, 150, 30))

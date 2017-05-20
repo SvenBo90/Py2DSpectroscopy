@@ -14,8 +14,9 @@ class UiAddMicrographDialog(object):
 
         # set window title, object name and window size
         add_micrograph_dialog.setWindowTitle("Add Micrograph")
-        add_micrograph_dialog.setObjectName("AddMicrographDialog")
-        add_micrograph_dialog.resize(960, 480)
+        add_micrograph_dialog.setObjectName("add_micrograph_dialog")
+        add_micrograph_dialog.setFixedWidth(960)
+        add_micrograph_dialog.setFixedHeight(480)
 
         # button box
         self.button_box = QDialogButtonBox(add_micrograph_dialog)
@@ -32,7 +33,7 @@ class UiAddMicrographDialog(object):
 
         # widget for the toolbar
         self.toolbar_widget = QWidget(add_micrograph_dialog)
-        self.toolbar_widget.setGeometry(QRect(10, 420, 400, 50))
+        self.toolbar_widget.setGeometry(QRect(10, 450, 400, 50))
         self.toolbar_widget.setObjectName("toolbar_widget")
 
         # widget for buttons controlling the points on the plots
@@ -41,32 +42,32 @@ class UiAddMicrographDialog(object):
         self.button_widget.setObjectName("button_widget")
 
         # button to remove all moving points
-        self.clear_all_moving_button = QPushButton(self.button_widget)
-        self.clear_all_moving_button.setEnabled(False)
-        self.clear_all_moving_button.setGeometry(QRect(580, 2, 100, 28))
-        self.clear_all_moving_button.setObjectName("clear_all_moving_button")
-        self.clear_all_moving_button.setText("Clear All")
+        self.clear_all_moving_push_button = QPushButton(self.button_widget)
+        self.clear_all_moving_push_button.setEnabled(False)
+        self.clear_all_moving_push_button.setGeometry(QRect(580, 2, 100, 28))
+        self.clear_all_moving_push_button.setObjectName("clear_all_moving_push_button")
+        self.clear_all_moving_push_button.setText("Clear All")
 
         # button to remove last moving point
-        self.clear_last_moving_button = QPushButton(self.button_widget)
-        self.clear_last_moving_button.setEnabled(False)
-        self.clear_last_moving_button.setGeometry(QRect(475, 2, 100, 28))
-        self.clear_last_moving_button.setObjectName("clear_last_moving_button")
-        self.clear_last_moving_button.setText("Clear Last")
+        self.clear_last_moving_push_button = QPushButton(self.button_widget)
+        self.clear_last_moving_push_button.setEnabled(False)
+        self.clear_last_moving_push_button.setGeometry(QRect(475, 2, 100, 28))
+        self.clear_last_moving_push_button.setObjectName("clear_last_moving_push_button")
+        self.clear_last_moving_push_button.setText("Clear Last")
 
         # button to remove all fixed points
-        self.clear_all_fixed_button = QPushButton(self.button_widget)
-        self.clear_all_fixed_button.setEnabled(False)
-        self.clear_all_fixed_button.setGeometry(QRect(110, 2, 100, 28))
-        self.clear_all_fixed_button.setObjectName("clear_all_fixed_button")
-        self.clear_all_fixed_button.setText("Clear All")
+        self.clear_all_fixed_push_button = QPushButton(self.button_widget)
+        self.clear_all_fixed_push_button.setEnabled(False)
+        self.clear_all_fixed_push_button.setGeometry(QRect(110, 2, 100, 28))
+        self.clear_all_fixed_push_button.setObjectName("clear_all_fixed_push_button")
+        self.clear_all_fixed_push_button.setText("Clear All")
 
         # button to remove last fixed point
-        self.clear_last_fixed_button = QPushButton(self.button_widget)
-        self.clear_last_fixed_button.setEnabled(False)
-        self.clear_last_fixed_button.setGeometry(QRect(5, 2, 100, 28))
-        self.clear_last_fixed_button.setObjectName("clear_last_fixed_button")
-        self.clear_last_fixed_button.setText("Clear Last")
+        self.clear_last_fixed_push_button = QPushButton(self.button_widget)
+        self.clear_last_fixed_push_button.setEnabled(False)
+        self.clear_last_fixed_push_button.setGeometry(QRect(5, 2, 100, 28))
+        self.clear_last_fixed_push_button.setObjectName("clear_last_fixed_push_button")
+        self.clear_last_fixed_push_button.setText("Clear Last")
 
         # connect accept and reject
         self.button_box.accepted.connect(add_micrograph_dialog.accept)

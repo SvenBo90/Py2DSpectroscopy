@@ -13,6 +13,7 @@ class UiMapWindow(object):
     def __init__(self, map_window):
 
         # set object name and size
+        map_window.setWindowTitle("Py2DSpectroscopy")
         map_window.setObjectName("map_window")
         map_window.resize(640, 480)
 
@@ -119,11 +120,18 @@ class UiMapWindow(object):
         self.tools_menu.addAction(self.action_remove_cosmic_rays)
 
         # about menu
-        self.about_menu = self.menu_bar.addMenu('About')
+        self.help_menu = self.menu_bar.addMenu('Help')
 
         # about action
         self.action_about = QAction(map_window)
         self.action_about.setObjectName("action_about")
         self.action_about.setText("About")
         self.action_about.setEnabled(True)
-        self.about_menu.addAction(self.action_about)
+        self.help_menu.addAction(self.action_about)
+
+        # wiki action
+        self.action_wiki = QAction(map_window)
+        self.action_wiki.setObjectName("action_wiki")
+        self.action_wiki.setText("Wiki")
+        self.action_wiki.setEnabled(True)
+        self.help_menu.addAction(self.action_wiki)

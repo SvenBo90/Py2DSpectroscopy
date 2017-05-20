@@ -1,12 +1,13 @@
 # general imports
-from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtWidgets import QApplication, QComboBox, QFileDialog, QInputDialog, QMainWindow, QMessageBox, \
-    QProgressDialog, QWidget
-# general imports
 from os import path
 import numpy
 from matplotlib import image
 from skimage import transform
+import webbrowser
+# import PyQt5 elements
+from PyQt5.QtCore import QRect, Qt
+from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog, QMainWindow, QMessageBox, \
+    QProgressDialog, QWidget
 # import UI
 from UIs.mapWindowUi import UiMapWindow
 from UIs.mapTabWidgetUi import UiMapTabWidget
@@ -35,13 +36,11 @@ class MapTab(QWidget):
 
             # create map canvas
             self._map_canvas = MapCanvas2D(self.ui.plot_widget, self._map)
-            self._map_canvas.update_data(False)
 
         elif self._map.get_dimension() == 1:
 
             # create map canvas
             self._map_canvas = MapCanvas1D(self.ui.plot_widget, self._map)
-            self._map_canvas.update_data(False)
 
         # add callbacks to map canvas
         self._map_canvas.add_callback('key_press_event', self.cb_map_key_press_event)
@@ -50,10 +49,10 @@ class MapTab(QWidget):
         # create widget including the toolbar
         self._map_canvas.add_toolbar(self.ui.toolbar_widget)
 
-        # create data selection widget
+        # fill data selection widget
         for key, value in self._map.get_data_names().items():
-            self.ui.data_selection_box.addItems([value])
-        self.ui.data_selection_box.currentIndexChanged.connect(self.cb_data_selection_changed)
+            self.ui.data_selection_combo_box.addItems([value])
+        self.ui.data_selection_combo_box.currentIndexChanged.connect(self.cb_data_selection_changed)
 
     def cb_data_selection_changed(self, index):
 
@@ -62,9 +61,7 @@ class MapTab(QWidget):
             index = 0
 
         # change the selected data and update the map canvas
-        self._map.set_data_selected(index)
-        self._map_canvas.update_data()
-        self._map_canvas.update_crosshair()
+        self._map.set_selected_data(index)
 
     def cb_map_button_press_event(self, event):
 
@@ -81,40 +78,10 @@ class MapTab(QWidget):
                 return
 
             # set focus of the map
-            if self._map.get_dimension() == 2:
-                self._map.set_focus([int(numpy.round(event.xdata)), int(numpy.round(event.ydata))])
-            elif self._map.get_dimension() == 1:
+            if self._map.get_dimension() == 1:
                 self._map.set_focus(int(numpy.round(event.ydata)))
-
-            # update cross hair
-            self._map_canvas.update_crosshair()
-
-            # update spectrum and pixel information window
-            self._app.windows['spectrumWindow'].update()
-            self._app.windows['pixelInformationWindow'].update()
-
-        # check if toolbar or area selector is active and if the central mouse button was used
-        elif self._map_canvas.get_toolbar_active() is None and event.button == 2:
-
-            # check if outer area has been clicked
-            if event.inaxes is None:
-
-                return
-
-            # set focus to all maps
-            for map_handle in self._app.maps.get_maps().values():
-                if map_handle.get_dimension() == 2:
-                    map_handle.set_focus([int(numpy.round(event.xdata)), int(numpy.round(event.ydata))])
-                elif map_handle.get_dimension() == 1:
-                    map_handle.set_focus(int(numpy.round(event.xdata)))
-
-            # update cross hair in all tabs
-            for tab_id in range(0, self._app.maps.get_count()):
-                self._app.windows['mapWindow'].ui.tab_widget.widget(tab_id).update_crosshair()
-
-            # update spectrum and pixel information window
-            self._app.windows['spectrumWindow'].update()
-            self._app.windows['pixelInformationWindow'].update()
+            elif self._map.get_dimension() == 2:
+                self._map.set_focus([int(numpy.round(event.xdata)), int(numpy.round(event.ydata))])
 
     def cb_map_key_press_event(self, event):
 
@@ -139,13 +106,6 @@ class MapTab(QWidget):
 
         # set new focus
         self._map.set_focus(focus)
-
-        # update cross hair
-        self._map_canvas.update_crosshair()
-
-        # update spectrum and pixel information window
-        self._app.windows['spectrumWindow'].update()
-        self._app.windows['pixelInformationWindow'].update()
 
     def create_area_map(self, *coordinates):
 
@@ -183,13 +143,13 @@ class MapTab(QWidget):
     def update(self):
 
         # update data
-        self._map_canvas.update_data()
+        self.update_data()
 
         # update cross hair
-        self._map_canvas.update_crosshair()
+        self.update_crosshair()
 
         # update data selection box
-        self.update_data_selection_box()
+        self.update_data_selection_combo_box()
 
     def update_area_map(self, *coordinates):
 
@@ -206,22 +166,22 @@ class MapTab(QWidget):
         # update data
         self._map_canvas.update_data()
 
-    def update_data_selection_box(self):
+    def update_data_selection_combo_box(self):
 
         # save the currently selected index
-        current_index = self.ui.data_selection_box.currentIndex()
+        current_index = self.ui.data_selection_combo_box.currentIndex()
 
         # clear the data selection box
-        self.ui.data_selection_box.clear()
+        self.ui.data_selection_combo_box.clear()
 
         # add data to the selection box
         for key, value in self._map.get_data_names().items():
-            self.ui.data_selection_box.addItems([value])
+            self.ui.data_selection_combo_box.addItems([value])
 
         # add micrographs to the selection box
         if self._map.get_dimension() == 2:
             for key, value in self._map.get_micrograph_names().items():
-                self.ui.data_selection_box.addItems([value])
+                self.ui.data_selection_combo_box.addItems([value])
 
         # add fit data to the selection box
         fit_functions = self._map.get_fit_functions()
@@ -229,30 +189,30 @@ class MapTab(QWidget):
         if self._map.get_dimension() == 2:
             for i_peak in range(6):
                 if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] > 0)) > 0:
-                    self.ui.data_selection_box.addItems(['I'+subscripts[i_peak], 'ε'+subscripts[i_peak]])
+                    self.ui.data_selection_combo_box.addItems(['I'+subscripts[i_peak], 'ε'+subscripts[i_peak]])
                 if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 1)) > 0 or numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 3)) > 0:
-                    self.ui.data_selection_box.addItems(['σ'+subscripts[i_peak]])
+                    self.ui.data_selection_combo_box.addItems(['σ'+subscripts[i_peak]])
                 if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 2)) > 0 or numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 3)) > 0:
-                    self.ui.data_selection_box.addItems(['γ'+subscripts[i_peak]])
+                    self.ui.data_selection_combo_box.addItems(['γ'+subscripts[i_peak]])
                 if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] > 0)) > 0:
-                    self.ui.data_selection_box.addItems(['FWHM'+subscripts[i_peak]])
+                    self.ui.data_selection_combo_box.addItems(['FWHM'+subscripts[i_peak]])
         else:
             for i_peak in range(6):  # TODO: do the job for 1D
                 if numpy.sum(numpy.int_(fit_functions[:, i_peak] == 3)) > 0:
-                    self.ui.data_selection_box.addItems(['I'+str(i_peak), 'λ'+str(i_peak),
-                                                       'σ'+str(i_peak), 'γ'+str(i_peak)])
+                    self.ui.data_selection_combo_box.addItems(['I'+str(i_peak), 'λ'+str(i_peak),
+                                                               'σ'+str(i_peak), 'γ'+str(i_peak)])
                 elif numpy.sum(numpy.int_(fit_functions[:, i_peak] == 1)) > 0 or \
                         numpy.sum(numpy.int_(fit_functions[:, i_peak] == 2)) > 0:
-                    self.ui.data_selection_box.addItems(['I'+str(i_peak), 'λ'+str(i_peak), 'σ'+str(i_peak)])
+                    self.ui.data_selection_combo_box.addItems(['I'+str(i_peak), 'λ'+str(i_peak), 'σ'+str(i_peak)])
 
         # if the selected index is still available select it
-        if current_index <= self.ui.data_selection_box.count():
+        if current_index <= self.ui.data_selection_combo_box.count():
 
-            self.ui.data_selection_box.setCurrentIndex(current_index)
+            self.ui.data_selection_combo_box.setCurrentIndex(current_index)
 
         else:
 
-            self.ui.data_selection_box.setCurrentIndex(0)
+            self.ui.data_selection_combo_box.setCurrentIndex(0)
 
     def update_threshold_map(self, threshold_data, threshold):
 
@@ -269,6 +229,9 @@ class MapWindow(QMainWindow):
 
         # link app
         self._app = QApplication.instance()
+
+        # dictionary for map tabs
+        self._map_tab_widgets = {}
 
         # load and set up UI
         self.ui = UiMapWindow(self)
@@ -295,6 +258,7 @@ class MapWindow(QMainWindow):
 
         # link actions for the help menu
         self.ui.action_about.triggered.connect(self.cb_action_about)
+        self.ui.action_wiki.triggered.connect(self.cb_action_wiki)
 
         # link actions for the tab widget
         self.ui.tab_widget.currentChanged.connect(self.cb_change_map)
@@ -363,17 +327,14 @@ class MapWindow(QMainWindow):
             # transform micrograph
             micrograph_transformed = transform.warp(micrograph, transform_sum, output_shape=output_shape)
 
-            # save the micrograph
+            # save the micrograph and get the data id of this micrograph
             data_id = map_handle.add_micrograph(micrograph_name, micrograph_transformed)
 
             # update data selection box
-            self.ui.tab_widget.currentWidget().update_data_selection_box()
-
-            # set new micrograph as the current data
-            map_handle.set_data_selected(data_id)
+            self.ui.tab_widget.currentWidget().update_data_selection_combo_box()
 
             # set current data to the new micrograph
-            self.ui.tab_widget.currentWidget()._data_selection_box.setCurrentIndex(data_id)
+            self.ui.tab_widget.currentWidget().ui.data_selection_combo_box.setCurrentIndex(data_id)
 
     def cb_action_exit(self):
 
@@ -422,10 +383,10 @@ class MapWindow(QMainWindow):
         map_handle = self._app.maps.append_2d(file_name)
 
         # create new tab for map
-        map_tab = MapTab(map_handle)
-        map_tab.update()
-        self.ui.tab_widget.addTab(map_tab, map_handle.get_map_name())
-        self.ui.tab_widget.setCurrentWidget(map_tab)
+        self._map_tab_widgets[map_handle.get_id()] = MapTab(map_handle)
+        self._map_tab_widgets[map_handle.get_id()].update()
+        self.ui.tab_widget.addTab(self._map_tab_widgets[map_handle.get_id()], map_handle.get_map_name())
+        self.ui.tab_widget.setCurrentWidget(self._map_tab_widgets[map_handle.get_id()])
 
         # update menus
         self.update_menus()
@@ -445,6 +406,8 @@ class MapWindow(QMainWindow):
         # get threshold for cosmic ray detection
         threshold, ok = QInputDialog.getInt(self._app.windows['mapWindow'], "Remove Cosmic Rays",
                                             "Threshold parameter:", 20, 0, 1e8, 1)
+        if not ok:
+            return
 
         # get map handle
         map_handle = self._app.maps.get_selected_map()
@@ -506,14 +469,13 @@ class MapWindow(QMainWindow):
                     diff = spectrum[:, 1]-spectrum_neighbours
                     spectrum[diff > threshold, 1] = spectrum_neighbours[diff > threshold]
 
-                    map_handle.set_spectrum(spectrum, pixel=[ix, iy])
+                    if numpy.sum(diff > threshold) > 0:
+                        if iy == ny-1 or (ix == map_handle.get_focus()[0] and iy == map_handle.get_focus()[1]):
+                            map_handle.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
+                        else:
+                            map_handle.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
 
                     progress_dialog.setValue(ix * ny + iy + 1)
-
-        # update spectrum and pixel information window
-        self._app.windows['spectrumWindow'].update()
-        self._app.windows['pixelInformationWindow'].update()
-        self.ui.tab_widget.currentWidget().update()
 
     def cb_action_save(self):
 
@@ -522,7 +484,15 @@ class MapWindow(QMainWindow):
         file_name = file_name[0]
 
         # save the map
+        if file_name == '':
+            return
         self._app.maps.save_map(file_name)
+
+    @staticmethod
+    def cb_action_wiki(self):
+
+        # open wiki page
+        webbrowser.open('https://github.com/SvenBo90/Py2DSpectroscopy/wiki')
 
     def cb_action_spectrum(self):
 
@@ -538,23 +508,10 @@ class MapWindow(QMainWindow):
             map_handle = self.ui.tab_widget.widget(index).get_map()
             self._app.maps.set_selected_map(map_handle)
 
-            # update windows
-            self._app.windows['spectrumWindow'].update()
-            self._app.windows['pixelInformationWindow'].update()
-            self._app.windows['fittingWindow'].update()
-            self._app.windows['backgroundWindow'].update()
-
         else:
 
             # reset list
             self._app.maps.reset()
-
-            # clear spectrum and pixel information window
-            self._app.windows['fittingWindow'].close()
-            self._app.windows['spectrumWindow'].clear()
-            self._app.windows['spectrumWindow'].close()
-            self._app.windows['pixelInformationWindow'].clear()
-            self._app.windows['pixelInformationWindow'].close()
 
         # update menus
         self.update_menus()
@@ -589,15 +546,20 @@ class MapWindow(QMainWindow):
             else:
                 event.ignore()
 
-    def update_data(self):
+    def update_crosshair(self, map_id):
 
         # update data in the currently selected tab
-        self.ui.tab_widget.currentWidget().update_data()
+        self._map_tab_widgets[map_id].update_crosshair()
 
-    def update_data_selection_box(self):
+    def update_data(self, map_id):
+
+        # update data in the currently selected tab
+        self._map_tab_widgets[map_id].update_data()
+
+    def update_data_selection_combo_box(self):
 
         # update the data selection box in the currently selected tab
-        self.ui.tab_widget.currentWidget().update_data_selection_box()
+        self.ui.tab_widget.currentWidget().update_data_selection_combo_box()
 
     def update_menus(self):
 

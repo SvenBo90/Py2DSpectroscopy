@@ -24,17 +24,17 @@ class UiFittingWidget(object):
         self.group_box.setObjectName("group_box")
 
         # radio button for the focused pixel selection
-        self.focused_pixel_radio = QRadioButton(self.group_box)
-        self.focused_pixel_radio.setText("Focused Pixel")
-        self.focused_pixel_radio.setGeometry(QRect(0, 25, 220, 27))
-        self.focused_pixel_radio.setChecked(True)
-        self.focused_pixel_radio.setObjectName("focused_pixel_radio")
+        self.focused_pixel_radio_button = QRadioButton(self.group_box)
+        self.focused_pixel_radio_button.setText("Focused Pixel")
+        self.focused_pixel_radio_button.setGeometry(QRect(0, 25, 220, 27))
+        self.focused_pixel_radio_button.setChecked(True)
+        self.focused_pixel_radio_button.setObjectName("focused_pixel_radio_button")
 
         # radio button for multiple pixel selection
-        self.multiple_pixels_radio = QRadioButton(self.group_box)
-        self.multiple_pixels_radio.setText("Multiple Pixels")
-        self.multiple_pixels_radio.setGeometry(QRect(0, 50, 220, 27))
-        self.multiple_pixels_radio.setObjectName("multiple_pixels_radio")
+        self.multiple_pixels_radio_button = QRadioButton(self.group_box)
+        self.multiple_pixels_radio_button.setText("Multiple Pixels")
+        self.multiple_pixels_radio_button.setGeometry(QRect(0, 50, 220, 27))
+        self.multiple_pixels_radio_button.setObjectName("multiple_pixels_radio_button")
 
         # label for the threshold data selection
         self.label = QLabel(self.group_box)
@@ -267,16 +267,16 @@ class UiFittingWidget(object):
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.tab_3), "Upper Bound.")
 
         # clear button
-        self.clear_button = QPushButton(fitting_window)
-        self.clear_button.setText("Clear")
-        self.clear_button.setGeometry(QRect(10, 565, 100, 27))
-        self.clear_button.setObjectName("clear_button")
+        self.clear_push_button = QPushButton(fitting_window)
+        self.clear_push_button.setText("Clear")
+        self.clear_push_button.setGeometry(QRect(10, 565, 100, 27))
+        self.clear_push_button.setObjectName("clear_push_button")
 
         # fit button
-        self.fit_button = QPushButton(fitting_window)
-        self.fit_button.setText("Fit")
-        self.fit_button.setGeometry(QRect(230, 565, 100, 27))
-        self.fit_button.setObjectName("fit_button")
+        self.fit_push_button = QPushButton(fitting_window)
+        self.fit_push_button.setText("Fit")
+        self.fit_push_button.setGeometry(QRect(230, 565, 100, 27))
+        self.fit_push_button.setObjectName("fit_push_button")
 
         # set current tab
         self.tab_widget.setCurrentIndex(0)

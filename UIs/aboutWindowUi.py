@@ -16,7 +16,8 @@ class UiAbout(object):
         # set window title, object name and bjoect size
         about_window.setWindowTitle("About")
         about_window.setObjectName("about")
-        about_window.resize(385, 184)
+        about_window.setFixedWidth(385)
+        about_window.setFixedHeight(184)
 
         # Juelich logo
         self.label = QLabel(about_window)
@@ -29,7 +30,7 @@ class UiAbout(object):
         self.label_2 = QLabel(about_window)
         self.label_2.setGeometry(QRect(10, 0, 311, 81))
         self.label_2.setObjectName("label_2")
-        self.label_2.setText("<html><head/><body><p><span style=\" font-weight:600;\">Py2DLuminescence 0.0.1</span>"
+        self.label_2.setText("<html><head/><body><p><span style=\" font-weight:600;\">Py2DLuminescence 0.1.4</span>"
                              "</p><p>Sven Borghardt, <a href=\"mailto:s.borghardt@fz-juelich.de\">"
                              "<span style=\" text-decoration: underline; color:#0000ff;\">s.borghardt@fz-juelich.de"
                              "</span></a></p></body></html>")

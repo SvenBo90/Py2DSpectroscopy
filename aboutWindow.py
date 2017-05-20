@@ -18,7 +18,3 @@ class AboutWindow(QMainWindow):
 
         # load and set up UI
         self.ui = UiAbout(self)
-
-        # set fixed size
-        self.setFixedWidth(385)
-        self.setFixedHeight(184)

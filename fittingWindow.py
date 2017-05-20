@@ -25,9 +25,6 @@ class FittingWidget(QWidget):
         # link map handle
         self._map = map_handle
 
-        # set object name
-        self.setObjectName("fittingWidget" + str(self._map.get_id()))
-
         # load and set up UI
         self.ui = UiFittingWidget(self)
 
@@ -91,7 +88,7 @@ class FittingWidget(QWidget):
         self.setParent(parent)
 
         # link callbacks for radio buttons
-        self.ui.focused_pixel_radio.toggled.connect(self.cb_radio_buttons)
+        self.ui.focused_pixel_radio_button.toggled.connect(self.cb_radio_button_buttons)
 
         # link callbacks for sliders
         self.ui.lower_limit_slider.sliderPressed.connect(self.cb_limit_slider_pressed)
@@ -120,8 +117,8 @@ class FittingWidget(QWidget):
         self.ui.area_slider_y2.sliderReleased.connect(self.cb_area_slider_released)
 
         # link callbacks for buttons
-        self.ui.clear_button.clicked.connect(self.cb_clear_button)
-        self.ui.fit_button.clicked.connect(self.cb_fit_button)
+        self.ui.clear_push_button.clicked.connect(self.cb_clear_push_button)
+        self.ui.fit_push_button.clicked.connect(self.cb_fit_push_button)
 
     def cb_area_slider_moved(self):
 
@@ -154,12 +151,12 @@ class FittingWidget(QWidget):
         self.setWindowState(self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
         self.activateWindow()
 
-    def cb_clear_button(self):
+    def cb_clear_push_button(self):
 
-        if self.ui.focused_pixel_radio.isChecked():
+        if self.ui.focused_pixel_radio_button.isChecked():
 
             # clear fit of the focused pixel
-            self._map.clear_fit()
+            self._map.clear_fit(emit=True)
 
         else:
 
@@ -194,7 +191,7 @@ class FittingWidget(QWidget):
                     for iy in range(int(numpy.ceil(fit_area[2])), int(numpy.floor(fit_area[3]))):
 
                         if lower_threshold <= threshold_data[ix, iy] <= upper_threshold:
-                            self._map.clear_fit(pixel=[ix, iy])
+                            self._map.clear_fit(pixel=[ix, iy], emit=True)
 
             else:   # TODO: test clearing for 1D maps
 
@@ -217,16 +214,9 @@ class FittingWidget(QWidget):
                 # clear fits from the area which fulfills the threshold condition
                 for ix in range(int(numpy.ceil(fit_area[0])), int(numpy.floor(fit_area[1]))):
                         if lower_threshold <= threshold_data[ix] >= upper_threshold:
-                            self._map.clear_fit(pixel=ix)
+                            self._map.clear_fit(pixel=ix, emit=True)
 
-        # update windows
-        self._app.windows['spectrumWindow'].update()
-        self._app.windows['pixelInformationWindow'].update()
-
-        # update data selection box
-        self._app.windows['mapWindow'].update_data_selection_box()
-
-    def cb_fit_button(self):
+    def cb_fit_push_button(self):
 
         # get fit functions
         fit_functions = numpy.zeros(6)
@@ -328,7 +318,7 @@ class FittingWidget(QWidget):
             return result
 
         # check if only one or multiple pixels are to be fitted
-        if self.ui.focused_pixel_radio.isChecked():
+        if self.ui.focused_pixel_radio_button.isChecked():
 
             # load spectrum
             spectrum = self._map.get_spectrum()
@@ -345,7 +335,7 @@ class FittingWidget(QWidget):
                                                                  p0=fit_initial_parameters,
                                                                  bounds=(fit_lower_boundaries, fit_upper_boundaries))
                 # save fit
-                self._map.set_fit(fit_functions, fit_initial_parameters, fit_optimized_parameters)
+                self._map.set_fit(fit_functions, fit_initial_parameters, fit_optimized_parameters, emit=True)
             except RuntimeError:
                 message_box = QMessageBox(self._app.windows['fittingWindow'])
                 message_box.setIcon(QMessageBox.Information)
@@ -385,8 +375,8 @@ class FittingWidget(QWidget):
 
                 # number of pixels to fit
                 n_pixels = numpy.count_nonzero(numpy.logical_and(
-                        lower_threshold <= threshold_data[int(numpy.ceil(fit_area[0])):int(numpy.floor(fit_area[1])), int(numpy.ceil(fit_area[2])):int(numpy.floor(fit_area[3]))],
-                        upper_threshold >= threshold_data[int(numpy.ceil(fit_area[0])):int(numpy.floor(fit_area[1])), int(numpy.ceil(fit_area[2])):int(numpy.floor(fit_area[3]))]))
+                        lower_threshold <= threshold_data[int(numpy.ceil(fit_area[0])):1+int(numpy.floor(fit_area[1])), int(numpy.ceil(fit_area[2])):1+int(numpy.floor(fit_area[3]))],
+                        upper_threshold >= threshold_data[int(numpy.ceil(fit_area[0])):1+int(numpy.floor(fit_area[1])), int(numpy.ceil(fit_area[2])):1+int(numpy.floor(fit_area[3]))]))
 
                 # create progressbar dialog
                 progress_dialog = QProgressDialog('', '', 0, n_pixels, self._app.windows['fittingWindow'])
@@ -398,7 +388,7 @@ class FittingWidget(QWidget):
 
                 # start fitting
                 i_px = 0
-                first_fit = True
+
                 for ix in range(int(numpy.ceil(fit_area[0])), 1+int(numpy.floor(fit_area[1]))):
 
                     # check if process was canceled
@@ -489,8 +479,15 @@ class FittingWidget(QWidget):
                                         p0=start_parameters, bounds=(fit_lower_boundaries, fit_upper_boundaries))
 
                                     # save fit
-                                    self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
-                                                      pixel=[ix, iy])
+                                    if numpy.sum(numpy.logical_and(
+                                                    lower_threshold <= threshold_data[ix, iy:1+int(numpy.floor(fit_area[3]))],
+                                                    threshold_data[ix, iy] <= upper_threshold)) == 1:
+                                        self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
+                                                          pixel=[ix, iy], emit=True)
+                                    else:
+                                        self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
+                                                          pixel=[ix, iy], emit=False)
+
                                 except RuntimeError:
                                     message_box = QMessageBox(self._app.windows['fittingWindow'])
                                     message_box.setIcon(QMessageBox.Information)
@@ -502,20 +499,6 @@ class FittingWidget(QWidget):
                                     if message_box.result() == 1:
                                         progress_dialog.close()
                                         return
-
-                            # update data selection box
-                            if first_fit:
-                                self._app.windows['mapWindow'].update_data_selection_box()
-                                first_fit = False
-
-                            # update map canvas
-                            if self._map.get_data_selected() >= len(self._map.get_data_names()) + len(self._map.get_micrograph_names()):
-                                self._app.windows['mapWindow'].update_data()
-
-                            # update pixel information and spectrum canvas
-                            if ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]:
-                                self._app.windows['spectrumWindow'].update()
-                                self._app.windows['pixelInformationWindow'].update()
 
                             # process events
                             self._app.processEvents()
@@ -577,14 +560,6 @@ class FittingWidget(QWidget):
                         # update progress bar
                         i_px += 1
                         progress_dialog.setValue(i_px)
-                    
-        # update windows
-        self._app.windows['spectrumWindow'].update()
-        self._app.windows['pixelInformationWindow'].update()
-        self._app.windows['backgroundWindow'].update()
-        
-        # update data selection box
-        self._app.windows['mapWindow'].update_data_selection_box()
         
     def cb_function_selected(self, index):
 
@@ -626,29 +601,29 @@ class FittingWidget(QWidget):
     def cb_limit_slider_moved(self):
 
         # update cursor on the spectrum canvas
-        self._app.windows['spectrumWindow'].update_cursors(self.ui.lower_limit_slider.value(),
-                                                           self.ui.upper_limit_slider.value())
+        self._app.windows['spectrumWindow'].get_current_widget().update_cursors(self.ui.lower_limit_slider.value(),
+                                                                                self.ui.upper_limit_slider.value())
 
     def cb_limit_slider_pressed(self):
 
         # create cursor on the spectrum canvas
-        self._app.windows['spectrumWindow'].create_cursors(self.ui.lower_limit_slider.value(),
-                                                           self.ui.upper_limit_slider.value())
+        self._app.windows['spectrumWindow'].get_current_widget().create_cursors(self.ui.lower_limit_slider.value(),
+                                                                                self.ui.upper_limit_slider.value())
 
     def cb_limit_slider_released(self):
 
         # remove cursor from the spectrum canvas
-        self._app.windows['spectrumWindow'].destroy_cursors()
+        self._app.windows['spectrumWindow'].get_current_widget().destroy_cursors()
 
         # bring window to front
         self.show()
         self.setWindowState(self.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
         self.activateWindow()
 
-    def cb_radio_buttons(self):
+    def cb_radio_button_buttons(self):
 
         # check which radio button is clicked
-        if self.ui.focused_pixel_radio.isChecked():
+        if self.ui.focused_pixel_radio_button.isChecked():
 
             self.ui.threshold_type_combo.setEnabled(False)
             self.ui.lower_threshold_slider.setEnabled(False)
@@ -660,7 +635,7 @@ class FittingWidget(QWidget):
             self.ui.overwrite_check_box.setEnabled(False)
             self.ui.neighbour_check_box.setEnabled(False)
 
-        elif self.ui.multiple_pixels_radio.isChecked():
+        elif self.ui.multiple_pixels_radio_button.isChecked():
 
             self.ui.threshold_type_combo.setEnabled(True)
             self.ui.lower_threshold_slider.setEnabled(True)
@@ -746,13 +721,33 @@ class FittingWindow(QMainWindow):
         # set window title
         self.setWindowTitle("Fitting")
 
-    def update(self):
+    def add_widget(self, map_id):
 
-        # check if the selected map already has a widget
-        map_handle = self._app.maps.get_selected_map()
-        if map_handle.get_id() not in self._fitting_widgets.keys():
-            self._fitting_widgets[map_handle.get_id()] = FittingWidget(self, map_handle)
-        if not self._fitting_widgets[map_handle.get_id()].isVisible():
-            for key in self._fitting_widgets.keys():
-                self._fitting_widgets[key].setVisible(False)
-            self._fitting_widgets[map_handle.get_id()].setVisible(True)
+        # get map handle
+        map_handle = self._app.maps.get_map(map_id)
+
+        # add a widget to the widgets list
+        self._fitting_widgets[map_handle.get_id()] = FittingWidget(self, map_handle)
+
+    def change_widget(self, map_id):
+
+        # get map handle
+        map_handle = self._app.maps.get_map(map_id)
+
+        # hide all widgets
+        for key in self._fitting_widgets.keys():
+            self._fitting_widgets[key].setVisible(False)
+
+        # make the widget for the select map visible
+        self._fitting_widgets[map_handle.get_id()].setVisible(True)
+
+    def remove_widget(self, map_id):
+
+        # remove the widget of the deleted map
+        self._fitting_widgets[map_id].setParent(None)
+        self._fitting_widgets[map_id].deleteLater()
+        del self._fitting_widgets[map_id]
+
+        # close the window if there are no more maps
+        if len(self._fitting_widgets) == 0:
+            self.close()

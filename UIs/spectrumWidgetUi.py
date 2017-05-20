@@ -3,10 +3,10 @@ from PyQt5.QtCore import QRect
 from PyQt5.QtWidgets import QCheckBox, QWidget
 
 
-class UiSpectrumWindow(object):
+class UiSpectrumWidget(object):
 
     """
-    Uispectrum_window
+    UiSpectrumWidget
     User interface for the spectrum window, which shows experimental spectra and fits.
     """
 
@@ -15,7 +15,8 @@ class UiSpectrumWindow(object):
         # set object name, window title and size
         spectrum_window.setWindowTitle("Spectrum")
         spectrum_window.setObjectName("spectrum_window")
-        spectrum_window.resize(480, 415)
+        spectrum_window.setFixedWidth(480)
+        spectrum_window.setFixedHeight(415)
 
         # plot widget
         self.plot_widget = QWidget()
@@ -25,14 +26,12 @@ class UiSpectrumWindow(object):
 
         # toolbar widget
         self.toolbar_widget = QWidget()
-
-        # widget for spectra selection buttons
-        self.checkbox_widget = QWidget()
         self.toolbar_widget.setParent(spectrum_window)
         self.toolbar_widget.setGeometry(QRect(10, 355, 460, 50))
         self.toolbar_widget.setObjectName("toolbar_widget")
 
         # widget for the plot selection checkboxes
+        self.checkbox_widget = QWidget()
         self.checkbox_widget.setParent(spectrum_window)
         self.checkbox_widget.setGeometry(QRect(10, 10, 460, 50))
         self.checkbox_widget.setObjectName("checkbox_widget")

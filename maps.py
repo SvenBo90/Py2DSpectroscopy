@@ -1,6 +1,6 @@
 # general imports
 from PyQt5.QtWidgets import QProgressDialog, QApplication
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import pyqtSignal, QObject, Qt
 from os import path
 import numpy
 import pickle
@@ -17,26 +17,37 @@ class Map:
     def __init__(self):
 
         # create all general variables
+        self._app = None
         self._data_names = {}       # dictionary for all data names
-        self._data_selected = 0     # a flag for the currently selected data
         self._dimension = 0         # the dimension of the map (1D, 2D)
         self._focus = []            # the currently focused pixel
         self._id = 0                # the map id
+        self._interval = [0, 0]     # integration interval for energy
         self._map_name = ''         # the map name
         self._resolution = 0        # the pixels on the CCD
+        self._selected_data = 0     # a flag for the currently selected data
+
+        # call super init
+        super(Map, self).__init__()
+
+    def set_app(self, app):
+
+        # set map list
+        self._app = app
 
     def get_data_names(self):
 
         # return data names
         return self._data_names
 
-    def get_data_selected(self):
+    def get_selected_data(self):
 
         # return the currently selected data
-        return self._data_selected
+        return self._selected_data
 
     def get_dimension(self):
 
+        # return map dimension
         return self._dimension
 
     def get_focus(self):
@@ -49,6 +60,11 @@ class Map:
         # return the map ID
         return self._id
 
+    def get_interval(self):
+
+        # return interval
+        return self._interval
+
     def get_map_name(self):
 
         # return map name
@@ -56,15 +72,21 @@ class Map:
 
     def get_resolution(self):
 
+        # return pixels on CCD
         return self._resolution
 
-    def set_data_selected(self, data_selected):
+    def set_selected_data(self, selected_data):
 
-        # update dataselection
-        self._data_selected = data_selected
+        # update data selection if the new data is different from the old one
+        if selected_data != self._selected_data:
+            self._selected_data = selected_data
+
+            # emit signal
+            self._app.selected_data_changed.emit(self._id)
 
     def set_id(self, map_id):
 
+        # set map id
         self._id = map_id
 
 
@@ -131,7 +153,7 @@ class Map1D(Map):
 
             # create progressbar dialog
             progress_dialog = QProgressDialog('', '', 0, self._nx,
-                                                    QApplication.instance().windows['mapWindow'])
+                                              QApplication.instance().windows['mapWindow'])
             progress_dialog.setWindowTitle('Loading Map')
             progress_dialog.setWindowModality(Qt.WindowModal)
             progress_dialog.setCancelButton(None)
@@ -186,7 +208,7 @@ class Map1D(Map):
         if 'data_index' in kwargs.keys():
             data_index = kwargs['data_index']
         else:
-            data_index = self._data_selected
+            data_index = self._selected_data
 
         # check if the id belongs to a data or a micrograph or a fit parameter
         if data_index == 0:
@@ -226,7 +248,7 @@ class Map1D(Map):
         if 'data_index' in kwargs.keys():
             data_index = kwargs['data_index']
         else:
-            data_index = self._data_selected
+            data_index = self._selected_data
 
         # check whether a data or a micrograph is selected
         if data_index < len(self._data)+1:
@@ -411,7 +433,7 @@ class Map2D(Map):
 
                 # create progressbar dialog
                 progress_dialog = QProgressDialog('', '', 0, self._nx * self._ny,
-                                                        QApplication.instance().windows['mapWindow'])
+                                                  QApplication.instance().windows['mapWindow'])
                 progress_dialog.setWindowTitle('Loading Map')
                 progress_dialog.setWindowModality(Qt.WindowModal)
                 progress_dialog.setCancelButton(None)
@@ -481,8 +503,8 @@ class Map2D(Map):
             i_px = 0
             for ix in range(self._nx):
                 for iy in range(self._ny):
-                    self._spectra[ix, iy, :, 0] = energies
-                    self._spectra[ix, iy, :, 1] = data_array[i_px, 2:]
+                    self._spectra[ix, iy, :, 0] = numpy.flipud(energies)
+                    self._spectra[ix, iy, :, 1] = numpy.flipud(data_array[i_px, 2:])
                     self._data[0, ix, iy] = numpy.sum(self._spectra[ix, iy, :, 1])
                     self._data[1, ix, iy] = data_array[i_px, 0]
                     self._data[2, ix, iy] = data_array[i_px, 1]
@@ -501,11 +523,11 @@ class Map2D(Map):
 
         # sort data names dictionary again
         i_data = 0
-        data_names = {}
+        data_names_new = {}
         for key in self._data_names.keys():
-            data_names[i_data] = self._data_names[key]
+            data_names_new[i_data] = self._data_names[key]
             i_data += 1
-        self._data_names = data_names
+        self._data_names = data_names_new
 
         # create variables for the fit data
         self._fit_functions = numpy.zeros((self._nx, self._ny, 6))
@@ -550,13 +572,17 @@ class Map2D(Map):
         self._fit_initial_parameters[px, py, :, :] = numpy.NAN
         self._fit_optimized_parameters[px, py, :, :] = numpy.NAN
 
+        # emit signal
+        if 'emit' not in kwargs or kwargs['emit']:
+            self._app.fit_changed.emit(self._id, [px, py])
+
     def get_data(self, **kwargs):
 
         # if no data index is given, return the currently selected data
         if 'data_index' in kwargs.keys():
             data_index = kwargs['data_index']
         else:
-            data_index = self._data_selected
+            data_index = self._selected_data
 
         # check if the id belongs to a data or a micrograph or a fit parameter
         if data_index < len(self._data):
@@ -641,7 +667,7 @@ class Map2D(Map):
         if 'data_index' in kwargs.keys():
             data_index = kwargs['data_index']
         else:
-            data_index = self._data_selected
+            data_index = self._selected_data
 
         # check whether a data or a micrograph or a fit parameter is selected
         if data_index < len(self._data):
@@ -762,13 +788,47 @@ class Map2D(Map):
                 self._fit_optimized_parameters[px, py, i_peak, :] = fit_optimized_parameters[i_parameter:i_parameter+4]
                 i_parameter += 4
 
+        # emit signal
+        if 'emit' not in kwargs or kwargs['emit']:
+            self._app.fit_changed.emit(self._id, [px, py])
+
     def set_focus(self, focus):
 
         # set focus if it is within the map
         if 0 <= numpy.round(focus[0]) < self._nx:
             if 0 <= numpy.round(focus[1]) < self._ny:
                 self._focus = [int(numpy.round(focus[0])), int(numpy.round(focus[1]))]
-        
+
+                # emit signal
+                self._app.focus_changed.emit(self._id)
+
+    def set_interval(self, side, value):
+
+        # check if a good interval has been given
+        if side == 'left' and value < 0:
+            return
+        if side == 'right' and value >= self._resolution:
+            return
+        if side == 'left' and self._interval[1] <= value:
+            return
+        if side == 'right' and self._interval[0] >= value:
+            return
+
+        # set interval
+        if side == 'left':
+            self._interval[0] = value
+        if side == 'right':
+            self._interval[1] = value
+
+        # recalculate intensities
+        for ix in range(self._nx):
+            for iy in range(self._ny):
+                spectrum = self._spectra[ix, iy, :, :]
+                self._data[0, ix, iy] = numpy.sum(spectrum[self._interval[0]:self._interval[1], 1])
+
+        # emit signal
+        self._app.interval_changed.emit(self._id)
+
     def set_spectrum(self, spectrum, **kwargs):
 
         # if no pixel was provided update the focused pixel
@@ -785,10 +845,22 @@ class Map2D(Map):
         # update integrated counts
         self._data[0, px, py] = numpy.sum(spectrum[:, 1])
 
+        # emit signal
+        if 'emit' not in kwargs or kwargs['emit']:
+            self._app.spectrum_changed.emit(self._id, [px, py])
 
-class MapList:
+
+class MapList(QObject):
+
+    """
+    MapList
+    A map list stores all maps loaded into the program.
+    """
 
     def __init__(self):
+
+        # link app
+        self._app = QApplication.instance()
 
         # create dictionary for maps
         self._maps = {}
@@ -798,24 +870,32 @@ class MapList:
         self._counter = 0
         self._id_counter = 0
 
+        # call super init
+        super(MapList, self).__init__()
+
     def append_1d(self, file_name):
 
-        # check if the loaded file is a .py2dl file
-        if file_name[-6:] == '.py2dl':
+        # check if the loaded file is a .py2ds file
+        if file_name[-6:] == '.py2ds':
 
-            # pickle map object from .py2dl file
+            # pickle map object from .py2ds file
             map_file = open(file_name, 'rb')
             self._maps[self._id_counter] = pickle.load(map_file)
             self._maps[self._id_counter].set_id(self._id_counter)
+            self._maps[self._id_counter].set_map_list(self)
 
         else:
 
             # create a new map object and select this map
             self._maps[self._id_counter] = Map1D(self._id_counter, file_name)
+            self._maps[self._id_counter].set_map_list(self)
 
         # increase the map  and id counter
         self._counter += 1
         self._id_counter += 1
+
+        # emit signal
+        self._app.map_added.emit(self._id_counter - 1)
 
         # return map object
         return self._maps[self._id_counter - 1]
@@ -829,15 +909,20 @@ class MapList:
             map_file = open(file_name, 'rb')
             self._maps[self._id_counter] = pickle.load(map_file)
             self._maps[self._id_counter].set_id(self._id_counter)
+            self._maps[self._id_counter].set_app(self._app)
 
         else:
 
             # create a new map object and select this map
             self._maps[self._id_counter] = Map2D(self._id_counter, file_name)
+            self._maps[self._id_counter].set_app(self._app)
 
         # increase the map  and id counter
         self._counter += 1
         self._id_counter += 1
+
+        # emit signal
+        self._app.map_added.emit(self._id_counter - 1)
 
         # return map object
         return self._maps[self._id_counter - 1]
@@ -846,6 +931,10 @@ class MapList:
 
         # return the map counter
         return self._counter
+
+    def get_map(self, map_id):
+
+        return self._maps[map_id]
 
     def get_maps(self):
 
@@ -859,11 +948,17 @@ class MapList:
 
     def remove_map(self, map_handle):
 
+        # get id of the map that is to be removed
+        map_id = map_handle.get_id()
+
         # remove map from dictionary
-        del self._maps[map_handle.get_id()]
+        del self._maps[map_id]
 
         # decrease map counter
         self._counter -= 1
+
+        # emit signal
+        self._app.map_removed.emit(map_id)
 
     def reset(self):
 
@@ -878,10 +973,15 @@ class MapList:
     def save_map(self, file_name):
 
         # dump map object to the pickle file
+        self._selected.set_app(None)
         dump_file = open(file_name, 'wb')
         pickle.dump(self._selected, dump_file, protocol=pickle.HIGHEST_PROTOCOL)
+        self._selected.set_app(self._app)
 
     def set_selected_map(self, map_handle):
 
         # set the selected map flag
         self._selected = map_handle
+
+        # emit signal
+        self._app.selected_map_changed.emit(map_handle.get_id())

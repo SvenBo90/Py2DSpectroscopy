@@ -1,11 +1,42 @@
 # general imports
-from PyQt5.QtWidgets import QApplication, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QDialog, QInputDialog, QSizePolicy
+from PyQt5.QtGui import QIcon
 import numpy
+import os
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib import gridspec, image
 import matplotlib.patches as patches
+# import UI
+from UIs.colormapDialogUi import UiColormapDialog
+
+
+class ColormapDialog(QDialog):
+
+    def __init__(self, parent, current_colormap):
+
+        # call widget init
+        QDialog.__init__(self, parent)
+
+        # define available colormaps
+        colormaps = ['bwr', 'gnuplot', 'gnuplot2', 'inferno', 'nipy_spectral', 'seismic', 'viridis']
+
+        # load and set up UI
+        self.ui = UiColormapDialog(self)
+
+        # fill combobox with colormaps
+        current_id = 0
+        for i_colormap in range(len(colormaps)):
+            if colormaps[i_colormap] == current_colormap:
+                current_id = i_colormap
+            self.ui.colormap_combobox.addItem(QIcon('./img/cm_'+colormaps[i_colormap]+'.png'), colormaps[i_colormap])
+        self.ui.colormap_combobox.setCurrentIndex(current_id)
+
+    def get_colormap(self):
+
+        # return the colormap selection
+        return self.ui.colormap_combobox.currentIndex()
 
 
 class PlotCanvas(FigureCanvas):
@@ -18,7 +49,7 @@ class PlotCanvas(FigureCanvas):
     def add_toolbar(self, parent):
 
         # add toolbar
-        self._toolbar = NavigationToolbar(self._fig.canvas, parent, coordinates=True)
+        self._toolbar = NavigationToolbar(self._fig.canvas, parent)
 
     def get_toolbar_active(self):
 
@@ -278,7 +309,13 @@ class MapCanvas2D(PlotCanvas):
         # update geometry
         FigureCanvas.updateGeometry(self)
 
+        # draw canvas
         self._fig.canvas.draw()
+
+    def add_toolbar(self, parent):
+
+        # add toolbar
+        self._toolbar = MapCanvas2DToolbar(self._fig.canvas, parent)
 
     def create_area_map(self, x1, x2, y1, y2):
 
@@ -332,15 +369,13 @@ class MapCanvas2D(PlotCanvas):
     def create_threshold_map(self, threshold_data, threshold):
 
         # create threshold map
-        self._threshold_map_lines = self._axes.contour(numpy.transpose(threshold_data),
-                                                  threshold, colors=('k', 'k'),
-                                                  origin='lower',
-                                                  extent=[-0.5, self._extent[0] - 0.5, -0.5, self._extent[1] - 0.5])
-        self._threshold_map_filling = self._axes.contourf(numpy.transpose(threshold_data),
-                                                  threshold, colors=('w'),
-                                                  origin='lower',
-                                                  extent=[-0.5, self._extent[0] - 0.5, -0.5, self._extent[1] - 0.5],
-                                                  alpha=0.5)
+        self._threshold_map_lines = self._axes.contour(numpy.transpose(threshold_data), threshold, colors=('k', 'k'),
+                                                       origin='lower',
+                                                       extent=[-0.5, self._extent[0] - 0.5, -0.5, self._extent[1] - 0.5])
+        self._threshold_map_filling = self._axes.contourf(numpy.transpose(threshold_data), threshold, colors='w',
+                                                          origin='lower',
+                                                          extent=[-0.5, self._extent[0] - 0.5, -0.5, self._extent[1] - 0.5],
+                                                          alpha=0.5)
 
         # redraw
         self._fig.canvas.draw()
@@ -430,6 +465,54 @@ class MapCanvas2D(PlotCanvas):
         self._fig.canvas.draw()
 
 
+class MapCanvas2DToolbar(NavigationToolbar):
+
+    """
+    MapCanvas2DToolbar
+    Toolbar for the MapCanvas2D
+    """
+
+    def __init__(self, canvas_, parent_):
+        self.toolitems = (
+            ('Home', 'Reset original view', 'home', 'home'),
+            ('Back', 'Back to  previous view', 'back', 'back'),
+            ('Forward', 'Forward to next view', 'forward', 'forward'),
+            (None, None, None, None),
+            ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
+            ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
+            ('Axes Scaling', 'Toggles the axes scaling', os.path.dirname(os.path.abspath(__file__))+'/img/axis_equal', 'toggle_axes_aspect'),
+            ('Colormap', 'Choose the colormap', os.path.dirname(os.path.abspath(__file__))+'/img/colormap', 'choose_colormap'),
+            (None, None, None, None),
+            ('Save', 'Save the figure', 'filesave', 'save_figure')
+        )
+        NavigationToolbar.__init__(self, canvas_, parent_)
+
+    def choose_colormap(self):
+
+        # open micrograph dialog
+        colormap_dialog = ColormapDialog(self, self.canvas._map_plot.get_cmap().name)
+        colormap_dialog.exec_()
+
+        # change the colormap
+        if colormap_dialog.result() == 1:
+            colormaps = ['bwr', 'gnuplot', 'gnuplot2', 'inferno', 'nipy_spectral', 'seismic', 'viridis']
+            self.canvas._map_plot.set_cmap(colormaps[colormap_dialog.get_colormap()])
+
+            # redraw
+            self.canvas.draw()
+
+    def toggle_axes_aspect(self):
+
+        # toggle the aspect
+        if self.canvas._axes.get_aspect() == 'auto':
+            self.canvas._axes.set_aspect('equal')
+        elif self.canvas._axes.get_aspect() == 'equal':
+            self.canvas._axes.set_aspect('auto')
+
+        # redraw
+        self.canvas.draw()
+
+
 class MicrographCanvas(PlotCanvas):
 
     def __init__(self, map_data, map_data_title, micrograph_file, parent):
@@ -484,6 +567,11 @@ class MicrographCanvas(PlotCanvas):
         # update geometry
         FigureCanvas.updateGeometry(self)
 
+    def add_toolbar(self, parent):
+
+        # add toolbar
+        self._toolbar = MicrograpCanvasToolbar(self._fig.canvas, parent)
+
     def get_axes(self):
 
         return self._map_axes, self._micro_axes
@@ -511,9 +599,44 @@ class MicrographCanvas(PlotCanvas):
         self._fig.canvas.draw()
 
 
+class MicrograpCanvasToolbar(NavigationToolbar):
+
+    """
+    MicrograpCanvashToolbar
+    Toolbar for the micrograp canvas
+    """
+
+    def __init__(self, canvas_, parent_):
+        self.toolitems = (
+            ('Home', 'Reset original view', 'home', 'home'),
+            ('Back', 'Back to  previous view', 'back', 'back'),
+            ('Forward', 'Forward to next view', 'forward', 'forward'),
+            (None, None, None, None),
+            ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
+            ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
+            ('Axes Scaling', 'Toggles the axes scaling', os.path.dirname(os.path.abspath(__file__))+'/img/axis_equal', 'toggle_axes_aspect'),
+        )
+        NavigationToolbar.__init__(self, canvas_, parent_)
+
+    def toggle_axes_aspect(self):
+
+        # toggle the aspect
+        if self.canvas._map_axes.get_aspect() == 'auto':
+            self.canvas._map_axes.set_aspect('equal')
+            self.canvas._micro_axes.set_aspect('equal')
+        elif self.canvas._map_axes.get_aspect() == 'equal':
+            self.canvas._micro_axes.set_aspect('auto')
+
+        # redraw
+        self.canvas.draw()
+
+
 class SpectrumCanvas(PlotCanvas):
 
-    def __init__(self, parent):
+    def __init__(self, parent, map_handle):
+
+        # link map
+        self._map = map_handle
 
         # create figure
         app_dpi_x = float(QApplication.desktop().physicalDpiX())
@@ -525,6 +648,19 @@ class SpectrumCanvas(PlotCanvas):
         self._axes = self._fig.add_subplot(111)
         self._axes.set_xlabel('energy [eV]')
         self._axes.set_ylabel('counts')
+
+        # plot initial spectrum
+        spectrum = self._map.get_spectrum()
+        self._axes.plot(spectrum[:, 0], spectrum[:, 1], color='black', label='Spectrum')
+        self._axes.plot([spectrum[0, 0], spectrum[0, 0]], [-100000000, 100000000], 'r--')
+        self._axes.plot([spectrum[-1, 0], spectrum[-1, 0]], [-100000000, 100000000], 'r--')
+        self._axes.set_xlim([numpy.min(spectrum[:, 0]), numpy.max(spectrum[:, 0])])
+        self._axes.set_ylim([numpy.min(spectrum[:, 1]), numpy.max(spectrum[:, 1]) + 0.1 *
+                             (numpy.max(spectrum[:, 1]) - numpy.min(spectrum[:, 1]))])
+        self._axes.legend()
+
+        # get energies for cursor positioning
+        self._energies = spectrum[:, 0]
 
         # create cursor rectangle
         self._cursor_rectangle = patches.Rectangle(
@@ -548,6 +684,11 @@ class SpectrumCanvas(PlotCanvas):
         # update geometry
         FigureCanvas.updateGeometry(self)
 
+    def add_toolbar(self, parent):
+
+        # add toolbar
+        self._toolbar = SpectrumCanvasToolbar(self._fig.canvas, parent)
+
     def clear(self):
 
         # remove plots
@@ -563,8 +704,8 @@ class SpectrumCanvas(PlotCanvas):
     def create_cursors(self, x1, x2):
 
         # create cursor rectangle
-        self._cursor_rectangle = patches.Rectangle((self._wavelengths[x1], -1000000),
-                                                   self._wavelengths[x2] - self._wavelengths[x1], 2000000,
+        self._cursor_rectangle = patches.Rectangle((self._energies[x1], -1000000),
+                                                   self._energies[x2] - self._energies[x1], 2000000,
                                                    linewidth=1.5, facecolor=(0, 0, 1, 0.5), edgecolor=(0, 0, 0, 1))
         self._axes.add_patch(self._cursor_rectangle)
 
@@ -574,8 +715,8 @@ class SpectrumCanvas(PlotCanvas):
     def update_cursors(self, x1, x2):
 
         # update cursor rectangle
-        self._cursor_rectangle.set_x(self._wavelengths[x1])
-        self._cursor_rectangle.set_width(self._wavelengths[x2]-self._wavelengths[x1])
+        self._cursor_rectangle.set_x(self._energies[x1])
+        self._cursor_rectangle.set_width(self._energies[x2]-self._energies[x1])
 
         # redraw
         self._fig.canvas.draw()
@@ -593,8 +734,8 @@ class SpectrumCanvas(PlotCanvas):
         # remove old plots
         self._axes.clear()
 
-        # update wavelengths for cursor positioning
-        self._wavelengths = data['spectrum'][:, 0]
+        # update energies for cursor positioning
+        self._energies = data['spectrum'][:, 0]
 
         # plot spectra
         for key in sorted(data.keys()):
@@ -610,6 +751,11 @@ class SpectrumCanvas(PlotCanvas):
             elif len(key) == 8:
                 if key[-6:] == '(opt.)' and checkboxes[4]:
                     self._axes.plot(data[key][:, 0], data[key][:, 1], linestyle='dashed',  color='blue', label=key)
+
+        # interval boundaries
+        interval = self._map.get_interval()
+        self._axes.plot([self._energies[interval[0]], self._energies[interval[0]]], [-100000000, 100000000], 'r--')
+        self._axes.plot([self._energies[interval[1]], self._energies[interval[1]]], [-100000000, 100000000], 'r--')
 
         # update axes limits
         self._axes.set_xlim([numpy.min(data['spectrum'][:, 0]), numpy.max(data['spectrum'][:, 0])])
@@ -628,3 +774,24 @@ class SpectrumCanvas(PlotCanvas):
 
         # redraw canvas
         self._fig.canvas.draw()
+
+
+class SpectrumCanvasToolbar(NavigationToolbar):
+
+    """
+    SpectrumCanvasToolbar
+    Toolbar for the SpectrumCanvas
+    """
+
+    def __init__(self, canvas_, parent_):
+        self.toolitems = (
+            ('Home', 'Reset original view', 'home', 'home'),
+            ('Back', 'Back to  previous view', 'back', 'back'),
+            ('Forward', 'Forward to next view', 'forward', 'forward'),
+            (None, None, None, None),
+            ('Pan', 'Pan axes with left mouse, zoom with right', 'move', 'pan'),
+            ('Zoom', 'Zoom to rectangle', 'zoom_to_rect', 'zoom'),
+            (None, None, None, None),
+            ('Save', 'Save the figure', 'filesave', 'save_figure')
+        )
+        NavigationToolbar.__init__(self, canvas_, parent_)

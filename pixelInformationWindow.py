@@ -4,12 +4,12 @@ import numpy
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QWidget
 # import UI
-from UIs.pixelInformationWindowUi import UiPixelInformationWindow
+from UIs.pixelInformationWidgetUi import UiPixelInformationWidget
 
 
-class PixelInformationWindow(QMainWindow):
+class PixelInformationWidget(QWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent, map_handle):
 
         # call widget init
         QWidget.__init__(self, parent)
@@ -17,8 +17,11 @@ class PixelInformationWindow(QMainWindow):
         # link app
         self._app = QApplication.instance()
 
+        # link map handle
+        self._map = map_handle
+
         # load and set up UI
-        self.ui = UiPixelInformationWindow(self)
+        self.ui = UiPixelInformationWidget(self)
 
         # set fixed size
         self.setFixedWidth(320)
@@ -27,51 +30,51 @@ class PixelInformationWindow(QMainWindow):
     def clear(self):
 
         # clear the table
-        self.ui.pixel_information_table.clear()
+        self.ui.pixel_information_table_widget.clear()
 
-    def update(self):
+    def update_data(self):
 
         # get map dimension
-        dimension = self._app.maps.get_selected_map().get_dimension()
+        dimension = self._map.get_dimension()
 
         # get data names
-        data_names = self._app.maps.get_selected_map().get_data_names()
+        data_names = self._map.get_data_names()
 
         # get fit data
-        fit_functions, fit_initial_parameters, fit_optimized_parameters = self._app.maps.get_selected_map().get_fit()
+        fit_functions, fit_initial_parameters, fit_optimized_parameters = self._map.get_fit()
         n_parameters = 4*numpy.sum(numpy.int_(fit_functions == 1)) + \
             4*numpy.sum(numpy.int_(fit_functions == 2)) + \
             5*numpy.sum(numpy.int_(fit_functions == 3))
 
         # update table
-        self.ui.pixel_information_table.setRowCount(len(data_names)+n_parameters+dimension)
-        self.ui.pixel_information_table.setColumnCount(2)
-        self.ui.pixel_information_table.horizontalHeader().setStretchLastSection(True)
-        self.ui.pixel_information_table.horizontalHeader().hide()
-        self.ui.pixel_information_table.verticalHeader().hide()
+        self.ui.pixel_information_table_widget.setRowCount(len(data_names)+n_parameters+dimension)
+        self.ui.pixel_information_table_widget.setColumnCount(2)
+        self.ui.pixel_information_table_widget.horizontalHeader().setStretchLastSection(True)
+        self.ui.pixel_information_table_widget.horizontalHeader().hide()
+        self.ui.pixel_information_table_widget.verticalHeader().hide()
 
         # add pixel number
-        focused_pixel = self._app.maps.get_selected_map().get_focus()
+        focused_pixel = self._map.get_focus()
         if dimension == 1:
             name_widget = QTableWidgetItem('x pixel')
             name_widget.setFlags(Qt.ItemIsEnabled)
             data_widget = QTableWidgetItem(str(focused_pixel))
             data_widget.setFlags(Qt.ItemIsEnabled)
-            self.ui.pixel_information_table.setItem(0, 0, name_widget)
-            self.ui.pixel_information_table.setItem(0, 1, data_widget)
+            self.ui.pixel_information_table_widget.setItem(0, 0, name_widget)
+            self.ui.pixel_information_table_widget.setItem(0, 1, data_widget)
         else:
             name_widget = QTableWidgetItem('x pixel')
             name_widget.setFlags(Qt.ItemIsEnabled)
             data_widget = QTableWidgetItem(str(focused_pixel[0]))
             data_widget.setFlags(Qt.ItemIsEnabled)
-            self.ui.pixel_information_table.setItem(0, 0, name_widget)
-            self.ui.pixel_information_table.setItem(0, 1, data_widget)
+            self.ui.pixel_information_table_widget.setItem(0, 0, name_widget)
+            self.ui.pixel_information_table_widget.setItem(0, 1, data_widget)
             name_widget = QTableWidgetItem('y pixel')
             name_widget.setFlags(Qt.ItemIsEnabled)
             data_widget = QTableWidgetItem(str(focused_pixel[1]))
             data_widget.setFlags(Qt.ItemIsEnabled)
-            self.ui.pixel_information_table.setItem(1, 0, name_widget)
-            self.ui.pixel_information_table.setItem(1, 1, data_widget)
+            self.ui.pixel_information_table_widget.setItem(1, 0, name_widget)
+            self.ui.pixel_information_table_widget.setItem(1, 1, data_widget)
 
         for data_id, data_name in data_names.items():
 
@@ -85,8 +88,8 @@ class PixelInformationWindow(QMainWindow):
             data_widget.setFlags(Qt.ItemIsEnabled)
 
             # add widgets to table
-            self.ui.pixel_information_table.setItem(data_id+dimension, 0, name_widget)
-            self.ui.pixel_information_table.setItem(data_id+dimension, 1, data_widget)
+            self.ui.pixel_information_table_widget.setItem(data_id+dimension, 0, name_widget)
+            self.ui.pixel_information_table_widget.setItem(data_id+dimension, 1, data_widget)
 
         j_parameter = 0
         for i_peak in range(len(fit_functions)):
@@ -98,8 +101,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(fit_optimized_parameters[i_peak, 0]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
                 # wavelength
@@ -107,8 +110,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(fit_optimized_parameters[i_peak, 1]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
             if fit_functions[i_peak] == 1:
@@ -118,8 +121,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(1000*fit_optimized_parameters[i_peak, 2]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
                 # FWHM
@@ -127,8 +130,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(2*1000*fit_optimized_parameters[i_peak, 2]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
             if fit_functions[i_peak] == 2:
@@ -138,8 +141,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(1000*fit_optimized_parameters[i_peak, 2]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
                 # FWHM
@@ -147,8 +150,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(2.35482*1000*fit_optimized_parameters[i_peak, 2]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
             if fit_functions[i_peak] == 3:
@@ -158,8 +161,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(1000*fit_optimized_parameters[i_peak, 2]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
                 # gamma
@@ -167,8 +170,8 @@ class PixelInformationWindow(QMainWindow):
                 name_widget.setFlags(Qt.ItemIsEnabled)
                 data_widget = QTableWidgetItem(str(1000*fit_optimized_parameters[i_peak, 3]))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
 
                 # FWHM
@@ -178,6 +181,76 @@ class PixelInformationWindow(QMainWindow):
                 gamma = 1000*fit_optimized_parameters[i_peak, 3]
                 data_widget = QTableWidgetItem(str(0.5346*2.*gamma+numpy.sqrt(0.2166*4.*gamma**2.+2.35482**2.*sigma**2.)))
                 data_widget.setFlags(Qt.ItemIsEnabled)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
-                self.ui.pixel_information_table.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 0, name_widget)
+                self.ui.pixel_information_table_widget.setItem(len(data_names)+j_parameter+dimension, 1, data_widget)
                 j_parameter += 1
+
+
+class PixelInformationWindow(QMainWindow):
+
+    def __init__(self, parent=None):
+
+        # call widget init
+        QWidget.__init__(self, parent)
+
+        # link app
+        self._app = QApplication.instance()
+
+        # dictionary for pixel information widgets
+        self._pixel_information_widgets = {}
+        self._current_widget = None
+
+        # set fixed size
+        self.setFixedWidth(320)
+        self.setFixedHeight(240)
+
+        # set window title
+        self.setWindowTitle("Pixel Information")
+
+    def add_widget(self, map_id):
+
+        # get map handle
+        map_handle = self._app.maps.get_map(map_id)
+
+        # add a widget to the widgets list
+        self._pixel_information_widgets[map_handle.get_id()] = PixelInformationWidget(self, map_handle)
+
+    def change_widget(self, map_id):
+
+        # get map handle
+        map_handle = self._app.maps.get_map(map_id)
+
+        # hide all widgets
+        for key in self._pixel_information_widgets.keys():
+            self._pixel_information_widgets[key].setVisible(False)
+
+        # make the widget for the select map visible
+        self._pixel_information_widgets[map_handle.get_id()].setVisible(True)
+        self._current_widget = self._pixel_information_widgets[map_handle.get_id()]
+
+    def get_current_widget(self):
+
+        # return the current widget
+        return self._current_widget
+
+    def remove_widget(self, map_id):
+
+        # remove the widget of the deleted map
+        self._pixel_information_widgets[map_id].setParent(None)
+        self._pixel_information_widgets[map_id].deleteLater()
+        del self._pixel_information_widgets[map_id]
+
+        # close the window if there are no more maps
+        if len(self._pixel_information_widgets) == 0:
+            self._current_widget = None
+            self.close()
+
+    def update_data(self, map_id, pixel = -1):
+
+        # check if pixel is -1 or the focuses pixel
+        if pixel != -1:
+            if pixel[0] != self._app.maps.get_map(map_id).get_focus()[0] or \
+                            pixel[1] != self._app.maps.get_map(map_id).get_focus()[1]:
+                return
+
+        self._pixel_information_widgets[map_id].update_data()

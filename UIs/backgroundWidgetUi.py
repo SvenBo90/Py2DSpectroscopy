@@ -24,17 +24,17 @@ class UiBackgroundWidget(object):
         self.group_box.setObjectName("group_box")
 
         # radio button for focused pixel selection
-        self.focused_pixel_radio = QRadioButton(self.group_box)
-        self.focused_pixel_radio.setText("Focused Pixel")
-        self.focused_pixel_radio.setGeometry(QRect(0, 20, 220, 22))
-        self.focused_pixel_radio.setChecked(True)
-        self.focused_pixel_radio.setObjectName("focused_pixel_radio")
+        self.focused_pixel_radio_button = QRadioButton(self.group_box)
+        self.focused_pixel_radio_button.setText("Focused Pixel")
+        self.focused_pixel_radio_button.setGeometry(QRect(0, 20, 220, 22))
+        self.focused_pixel_radio_button.setChecked(True)
+        self.focused_pixel_radio_button.setObjectName("focused_pixel_radio_button")
 
         # radio button for whole selection
-        self.whole_map_radio = QRadioButton(self.group_box)
-        self.whole_map_radio.setText("Whole Map")
-        self.whole_map_radio.setGeometry(QRect(0, 42, 220, 22))
-        self.whole_map_radio.setObjectName("whole_map_radio")
+        self.whole_map_radio_button = QRadioButton(self.group_box)
+        self.whole_map_radio_button.setText("Whole Map")
+        self.whole_map_radio_button.setGeometry(QRect(0, 42, 220, 22))
+        self.whole_map_radio_button.setObjectName("whole_map_radio_button")
 
         # group box for background settings
         self.group_box_2 = QGroupBox(background_widget)
@@ -43,17 +43,17 @@ class UiBackgroundWidget(object):
         self.group_box_2.setObjectName("group_box_2")
 
         # radio button for minimum counts
-        self.minimum_counts_radio = QRadioButton(self.group_box_2)
-        self.minimum_counts_radio.setText("Minimum Counts")
-        self.minimum_counts_radio.setGeometry(QRect(0, 20, 220, 22))
-        self.minimum_counts_radio.setChecked(True)
-        self.minimum_counts_radio.setObjectName("minimum_counts_radio")
+        self.minimum_counts_radio_button = QRadioButton(self.group_box_2)
+        self.minimum_counts_radio_button.setText("Minimum Counts")
+        self.minimum_counts_radio_button.setGeometry(QRect(0, 20, 220, 22))
+        self.minimum_counts_radio_button.setChecked(True)
+        self.minimum_counts_radio_button.setObjectName("minimum_counts_radio_button")
 
         # radio button for interval average
-        self.interval_average_radio = QRadioButton(self.group_box_2)
-        self.interval_average_radio.setText("Interval Average")
-        self.interval_average_radio.setGeometry(QRect(0, 42, 220, 22))
-        self.interval_average_radio.setObjectName("interval_average_radio")
+        self.interval_average_radio_button = QRadioButton(self.group_box_2)
+        self.interval_average_radio_button.setText("Interval Average")
+        self.interval_average_radio_button.setGeometry(QRect(0, 42, 220, 22))
+        self.interval_average_radio_button.setObjectName("interval_average_radio_button")
 
         # label for interval selection
         self.label_5 = QLabel(self.group_box_2)
@@ -76,10 +76,10 @@ class UiBackgroundWidget(object):
         self.upper_boundary_slider.setObjectName("upper_boundary_slider")
 
         # background from pixel radio
-        self.background_from_pixel_radio = QRadioButton(self.group_box_2)
-        self.background_from_pixel_radio.setText("Background from Map Pixel")
-        self.background_from_pixel_radio.setGeometry(QRect(0, 91, 220, 22))
-        self.background_from_pixel_radio.setObjectName("background_from_pixel_radio")
+        self.background_from_pixel_radio_button = QRadioButton(self.group_box_2)
+        self.background_from_pixel_radio_button.setText("Background from Map Pixel")
+        self.background_from_pixel_radio_button.setGeometry(QRect(0, 91, 220, 22))
+        self.background_from_pixel_radio_button.setObjectName("background_from_pixel_radio_button")
 
         # label for x pixel selection
         self.label_7 = QLabel(self.group_box_2)
@@ -106,11 +106,11 @@ class UiBackgroundWidget(object):
         self.y_spin_box.setObjectName("y_spin_box")
 
         # radio button for file background
-        self.background_from_file_radio = QRadioButton(self.group_box_2)
-        self.background_from_file_radio.setText("Background from File")
-        self.background_from_file_radio.setEnabled(True)
-        self.background_from_file_radio.setGeometry(QRect(0, 140, 220, 22))
-        self.background_from_file_radio.setObjectName("background_from_file_radio")
+        self.background_from_file_radio_button = QRadioButton(self.group_box_2)
+        self.background_from_file_radio_button.setText("Background from File")
+        self.background_from_file_radio_button.setEnabled(True)
+        self.background_from_file_radio_button.setGeometry(QRect(0, 140, 220, 22))
+        self.background_from_file_radio_button.setObjectName("background_from_file_radio_button")
 
         # label for file selection
         self.label_9 = QLabel(self.group_box_2)
@@ -125,14 +125,14 @@ class UiBackgroundWidget(object):
         self.file_path_line_edit.setObjectName("file_path_line_edit")
 
         # file browse button
-        self.file_browse_button = QPushButton(self.group_box_2)
-        self.file_browse_button.setText("...")
-        self.file_browse_button.setEnabled(False)
-        self.file_browse_button.setGeometry(QRect(250, 167, 31, 27))
-        self.file_browse_button.setObjectName("file_browse_button")
+        self.file_browse_push_button = QPushButton(self.group_box_2)
+        self.file_browse_push_button.setText("...")
+        self.file_browse_push_button.setEnabled(False)
+        self.file_browse_push_button.setGeometry(QRect(250, 167, 31, 27))
+        self.file_browse_push_button.setObjectName("file_browse_push_button")
 
         # remove background button
-        self.remove_background_button = QPushButton(background_widget)
-        self.remove_background_button.setText("Remove Background")
-        self.remove_background_button.setGeometry(QRect(150, 283, 161, 27))
-        self.remove_background_button.setObjectName("remove_background_button")
+        self.remove_background_push_button = QPushButton(background_widget)
+        self.remove_background_push_button.setText("Remove Background")
+        self.remove_background_push_button.setGeometry(QRect(150, 283, 161, 27))
+        self.remove_background_push_button.setObjectName("remove_background_push_button")
