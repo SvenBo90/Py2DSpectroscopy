@@ -22,7 +22,7 @@ class Py2DSpectroscopy(QApplication):
     and saves the maps in a map list.
     """
 
-    # TODO: Map geometry operations: flipping and rotation
+    # TODO: Map geometry operations: rotation
 
     # define list signals
     map_added = pyqtSignal(int)             # int: map id
@@ -32,6 +32,7 @@ class Py2DSpectroscopy(QApplication):
     # define map signals
     fit_changed = pyqtSignal(int)            # int: map id
     focus_changed = pyqtSignal(int)          # int: map id
+    geometry_changed = pyqtSignal(int)       # int: map id
     interval_changed = pyqtSignal(int)       # int: map id
     selected_data_changed = pyqtSignal(int)  # int: map id
     spectrum_changed = pyqtSignal(int)       # int: map id
@@ -82,6 +83,9 @@ class Py2DSpectroscopy(QApplication):
         self.focus_changed.connect(self.windows['mapWindow'].update_crosshair)
         self.focus_changed.connect(self.windows['pixelInformationWindow'].update_data)
         self.focus_changed.connect(self.windows['spectrumWindow'].update_data)
+
+        self.geometry_changed.connect(self.windows['mapWindow'].update_data)
+        self.geometry_changed.connect(self.windows['mapWindow'].update_crosshair)
 
         self.interval_changed.connect(self.windows['mapWindow'].update_data)
         self.interval_changed.connect(self.windows['pixelInformationWindow'].update_data)

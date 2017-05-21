@@ -101,7 +101,7 @@ class UiMapWindow(object):
         # fitting action
         self.action_fitting = QAction(map_window)
         self.action_fitting.setObjectName("action_fitting")
-        self.action_fitting.setText("Fitting")
+        self.action_fitting.setText("Fit Map")
         self.action_fitting.setEnabled(False)
         self.tools_menu.addAction(self.action_fitting)
 
@@ -118,6 +118,23 @@ class UiMapWindow(object):
         self.action_remove_cosmic_rays.setText("Remove Cosmic Rays")
         self.action_remove_cosmic_rays.setEnabled(False)
         self.tools_menu.addAction(self.action_remove_cosmic_rays)
+
+        # flip map menu
+        self.flip_menu = self.tools_menu.addMenu('Flip map')
+
+        # flip horizontally action
+        self.action_horizontally = QAction(map_window)
+        self.action_horizontally.setObjectName("action_horizontally")
+        self.action_horizontally.setText("Horizontally")
+        self.action_horizontally.setEnabled(False)
+        self.flip_menu.addAction(self.action_horizontally)
+
+        # flip vertically action
+        self.action_vertically = QAction(map_window)
+        self.action_vertically.setObjectName("action_vertically")
+        self.action_vertically.setText("Vertically")
+        self.action_vertically.setEnabled(False)
+        self.flip_menu.addAction(self.action_vertically)
 
         # about menu
         self.help_menu = self.menu_bar.addMenu('Help')

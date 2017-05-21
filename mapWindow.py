@@ -255,6 +255,8 @@ class MapWindow(QMainWindow):
         self.ui.action_fitting.triggered.connect(self.cb_action_fitting)
         self.ui.action_remove_background.triggered.connect(self.cb_action_remove_background)
         self.ui.action_remove_cosmic_rays.triggered.connect(self.cb_action_remove_cosmic_rays)
+        self.ui.action_horizontally.triggered.connect(self.cb_action_horizontally)
+        self.ui.action_vertically.triggered.connect(self.cb_action_vertically)
 
         # link actions for the help menu
         self.ui.action_about.triggered.connect(self.cb_action_about)
@@ -350,6 +352,11 @@ class MapWindow(QMainWindow):
 
         # open spectrum window
         self._app.windows['fittingWindow'].show()
+
+    def cb_action_horizontally(self):
+
+        # flip the currently selected map horizontally
+        self._app.maps.get_selected_map().flip('horizontally')
 
     def cb_action1d_map(self):
 
@@ -488,6 +495,11 @@ class MapWindow(QMainWindow):
             return
         self._app.maps.save_map(file_name)
 
+    def cb_action_vertically(self):
+
+        # flip the currently selected map horizontally
+        self._app.maps.get_selected_map().flip('vertically')
+
     @staticmethod
     def cb_action_wiki(self):
 
@@ -576,6 +588,12 @@ class MapWindow(QMainWindow):
             self.ui.action_pixel_information.setEnabled(True)
             self.ui.action_remove_background.setEnabled(True)
             self.ui.action_remove_cosmic_rays.setEnabled(True)
+            if self._app.maps.get_selected_map().get_dimension() == 2:
+                self.ui.action_horizontally.setEnabled(True)
+                self.ui.action_vertically.setEnabled(True)
+            else:
+                self.ui.action_horizontally.setEnabled(False)
+                self.ui.action_vertically.setEnabled(False)
 
         else:
 
@@ -586,3 +604,5 @@ class MapWindow(QMainWindow):
             self.ui.action_pixel_information.setEnabled(False)
             self.ui.action_remove_background.setEnabled(False)
             self.ui.action_remove_cosmic_rays.setEnabled(False)
+            self.ui.action_horizontally.setEnabled(False)
+            self.ui.action_vertically.setEnabled(False)

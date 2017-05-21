@@ -579,6 +579,44 @@ class Map2D(Map):
         if 'emit' not in kwargs or kwargs['emit']:
             self._app.fit_changed.emit(self._id)
 
+    def flip(self, direction):
+
+        if direction == 'horizontally':
+
+            # flip data
+            self._data = numpy.flip(self._data, 1)
+
+            # flip spectra
+            self._spectra = numpy.flip(self._spectra, 0)
+
+            # flip micrographs
+            for i_micrograph in range(len(self._micrographs)):
+                self._micrographs[i_micrograph] = numpy.flip(self._micrographs[i_micrograph], 1)
+
+            # update focus
+            self._focus[0] = self._nx - self._focus[0]
+
+            # emit signal
+            self._app.geometry_changed.emit(self._id)
+
+        elif direction == 'vertically':
+
+            # flip data
+            self._data = numpy.flip(self._data, 2)
+
+            # flip spectra
+            self._spectra = numpy.flip(self._spectra, 1)
+
+            # flip micrographs
+            for i_micrograph in range(len(self._micrographs)):
+                self._micrographs[i_micrograph] = numpy.flip(self._micrographs[i_micrograph], 0)
+
+            # update focus
+            self._focus[1] = self._ny - self._focus[1]
+
+            # emit signal
+            self._app.geometry_changed.emit(self._id)
+
     def get_data(self, **kwargs):
 
         # if no data index is given, return the currently selected data
