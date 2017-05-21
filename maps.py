@@ -1,6 +1,6 @@
 # general imports
 from PyQt5.QtWidgets import QProgressDialog, QApplication
-from PyQt5.QtCore import pyqtSignal, QObject, Qt
+from PyQt5.QtCore import Qt
 from os import path
 import numpy
 import pickle
@@ -27,9 +27,6 @@ class Map:
         self._resolution = 0        # the pixels on the CCD
         self._selected_data = 0     # a flag for the currently selected data
 
-        # call super init
-        super(Map, self).__init__()
-
     def set_app(self, app):
 
         # set map list
@@ -39,11 +36,6 @@ class Map:
 
         # return data names
         return self._data_names
-
-    def get_selected_data(self):
-
-        # return the currently selected data
-        return self._selected_data
 
     def get_dimension(self):
 
@@ -75,6 +67,11 @@ class Map:
         # return pixels on CCD
         return self._resolution
 
+    def get_selected_data(self):
+
+        # return the currently selected data
+        return self._selected_data
+
     def set_selected_data(self, selected_data):
 
         # update data selection if the new data is different from the old one
@@ -96,6 +93,8 @@ class Map1D(Map):
     Map1D
     Class for one-dimensional maps such as gate dependences or power dependences.
     """
+
+    # TODO: Build the Map1D class
 
     def __init__(self, map_id, file_name):
 
@@ -397,6 +396,9 @@ class Map2D(Map):
             spectrum = numpy.loadtxt(dir_name + '/spectrum_0_0.asc')
             self._resolution = len(spectrum)
 
+            # set initial interval for the integration of the spectra
+            self._interval = [0, self._resolution-1]
+
             # create variables for the data
             self._spectra = numpy.zeros((self._nx, self._ny, self._resolution, 2))
             self._data = numpy.zeros((file_data.shape[1] - 2, self._nx, self._ny))
@@ -454,7 +456,7 @@ class Map2D(Map):
                 numpy.save(dir_name + '/energies.npy', self._spectra[:, :, :, 0])
                 numpy.save(dir_name + '/spectra.npy', self._spectra[:, :, :, 1])
 
-        # .txt files are acquired in the Heinz Group at Stanford
+        # .txt files are acquired by the Horiba machine in the Heinz Group at Stanford
         elif file_name[-4:] == '.txt':
 
             # set map name to the file name
@@ -555,6 +557,7 @@ class Map2D(Map):
         self._micrographs[int(max_key) + 1] = micrograph
         self._micrograph_names[int(max_key) + 1] = file_name
 
+        # return the data id of the new micrograph
         return len(self._data_names) + int(max_key) + 1
 
     def clear_fit(self, **kwargs):
@@ -574,7 +577,7 @@ class Map2D(Map):
 
         # emit signal
         if 'emit' not in kwargs or kwargs['emit']:
-            self._app.fit_changed.emit(self._id, [px, py])
+            self._app.fit_changed.emit(self._id)
 
     def get_data(self, **kwargs):
 
@@ -712,19 +715,29 @@ class Map2D(Map):
         
     def get_fit_functions(self, **kwargs):
 
+        # if no pixel was provided return the whole fit functions array
         if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
             return self._fit_functions[:, :, :]
+
+        # if pixel is set to -2 return the fit functions for the focused pixel
         elif kwargs['pixel'] == -2:
             return self._fit_functions[self._focus[0], self._focus[1], :]
+
+        # return the fit functions for the desired pixel
         else:
             return self._fit_functions[kwargs['pixel'][0], kwargs['pixel'][1], :]
 
     def get_fit_parameters(self, **kwargs):
 
+        # if no pixel was provided return the whole fit parameter array
         if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
             return self._fit_optimized_parameters[:, :, :, :]
+
+        # if pixel is set to -2 return the fit parameters for the focused pixel
         elif kwargs['pixel'] == -2:
             return self._fit_optimized_parameters[self._focus[0], self._focus[1], :, :]
+
+        # return the fit parameters for the desired pixel
         else:
             return self._fit_optimized_parameters[kwargs['pixel'][0], kwargs['pixel'][1], :, :]
 
@@ -740,11 +753,12 @@ class Map2D(Map):
 
     def get_size(self):
 
+        # return map size
         return [self._nx, self._ny]
 
     def get_spectrum(self, **kwargs):
 
-        # if no pixel is given, return the focussed pixel's spectrum
+        # if no pixel is given, return the focused pixel's spectrum
         if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
             return self._spectra[self._focus[0], self._focus[1]]
         else:
@@ -790,7 +804,7 @@ class Map2D(Map):
 
         # emit signal
         if 'emit' not in kwargs or kwargs['emit']:
-            self._app.fit_changed.emit(self._id, [px, py])
+            self._app.fit_changed.emit(self._id)
 
     def set_focus(self, focus):
 
@@ -847,10 +861,10 @@ class Map2D(Map):
 
         # emit signal
         if 'emit' not in kwargs or kwargs['emit']:
-            self._app.spectrum_changed.emit(self._id, [px, py])
+            self._app.spectrum_changed.emit(self._id)
 
 
-class MapList(QObject):
+class MapList:
 
     """
     MapList
@@ -934,6 +948,7 @@ class MapList(QObject):
 
     def get_map(self, map_id):
 
+        # return the requested map
         return self._maps[map_id]
 
     def get_maps(self):

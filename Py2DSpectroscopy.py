@@ -22,17 +22,19 @@ class Py2DSpectroscopy(QApplication):
     and saves the maps in a map list.
     """
 
+    # TODO: Map geometry operations: flipping and rotation
+
     # define list signals
-    map_added = pyqtSignal(int)
-    map_removed = pyqtSignal(int)
-    selected_map_changed = pyqtSignal(int)
+    map_added = pyqtSignal(int)             # int: map id
+    map_removed = pyqtSignal(int)           # int: map id
+    selected_map_changed = pyqtSignal(int)  # int: map id
 
     # define map signals
-    fit_changed = pyqtSignal(int, list)
-    focus_changed = pyqtSignal(int)
-    interval_changed = pyqtSignal(int)
-    selected_data_changed = pyqtSignal(int)
-    spectrum_changed = pyqtSignal(int, list)
+    fit_changed = pyqtSignal(int)            # int: map id
+    focus_changed = pyqtSignal(int)          # int: map id
+    interval_changed = pyqtSignal(int)       # int: map id
+    selected_data_changed = pyqtSignal(int)  # int: map id
+    spectrum_changed = pyqtSignal(int)       # int: map id
 
     def __init__(self):
 

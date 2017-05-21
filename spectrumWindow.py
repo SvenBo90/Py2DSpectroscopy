@@ -104,6 +104,7 @@ class SpectrumWidget(QWidget):
 
     def update_cursors(self, x1, x2):
 
+        # update cursors
         self._spectrum_canvas.update_cursors(x1, x2)
 
     def update_data(self):
@@ -219,12 +220,7 @@ class SpectrumWindow(QMainWindow):
             self._current_widget = None
             self.close()
 
-    def update_data(self, map_id, pixel=-1):
+    def update_data(self, map_id):
 
-        # check if pixel is -1 or the focuses pixel
-        if pixel != -1:
-            if pixel[0] != self._app.maps.get_map(map_id).get_focus()[0] or \
-                            pixel[1] != self._app.maps.get_map(map_id).get_focus()[1]:
-                return
-
+        # update spectrum widget data
         self._spectrum_widgets[map_id].update_data()

@@ -14,6 +14,14 @@ from UIs.fittingWidgetUi import UiFittingWidget
 
 class FittingWidget(QWidget):
 
+    """
+    FittingWidget
+    The fitting widget is used for the fitting of the map.
+    """
+
+    # TODO: 1D Map Fitting
+    # TODO: Fit parameter for pixel selection
+
     def __init__(self, parent, map_handle):
 
         # call widget init
@@ -128,8 +136,7 @@ class FittingWidget(QWidget):
                 self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value(),
                 self.ui.area_slider_y1.value(), self.ui.area_slider_y2.value())
         else:
-            self._app.windows['mapWindow'].ui.tab_widget.currentWidget().update_area_map(
-                self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value())
+            return
 
     def cb_area_slider_pressed(self):
 
@@ -139,8 +146,7 @@ class FittingWidget(QWidget):
                 self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value(),
                 self.ui.area_slider_y1.value(), self.ui.area_slider_y2.value())
         else:
-            self._app.windows['mapWindow'].ui.tab_widget.currentWidget().create_area_map(
-                self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value())
+            return
 
     def cb_area_slider_released(self):
 
@@ -186,35 +192,26 @@ class FittingWidget(QWidget):
                 upper_threshold = min_data+1./10000.*self.ui.upper_threshold_slider.value()*(max_data-min_data)
 
                 # clear fits from the area which fulfills the threshold condition
-                for ix in range(int(numpy.ceil(fit_area[0])), int(numpy.floor(fit_area[1]))):
+                for ix in range(int(numpy.ceil(fit_area[0])), int(numpy.ceil(fit_area[1]))):
 
-                    for iy in range(int(numpy.ceil(fit_area[2])), int(numpy.floor(fit_area[3]))):
+                    for iy in range(int(numpy.ceil(fit_area[2])), int(numpy.ceil(fit_area[3]))):
 
                         if lower_threshold <= threshold_data[ix, iy] <= upper_threshold:
-                            self._map.clear_fit(pixel=[ix, iy], emit=True)
 
-            else:   # TODO: test clearing for 1D maps
+                            # check if this is the last cleared fit in this column
+                            if numpy.sum(numpy.logical_and(
+                                            lower_threshold <= threshold_data[ix, iy:int(numpy.ceil(fit_area[3]))],
+                                            threshold_data[ix, iy] <= upper_threshold)) == 1:
+                                self._map.clear_fit(pixel=[ix, iy], emit=True)
+                            else:
+                                self._map.clear_fit(pixel=[ix, iy], emit=False)
 
-                # get the area to be cleaned
-                if self.ui.area_slider_x2.value() < self.ui.area_slider_x1.value():
-                    x2 = self.ui.area_slider_x1.value()
-                    x1 = self.ui.area_slider_x2.value()
-                else:
-                    x1 = self.ui.area_slider_x1.value()
-                    x2 = self.ui.area_slider_x2.value()
-                fit_area = [x1, x2]
+                        # process events
+                        self._app.processEvents()
 
-                # get the threshold and the threshold data
-                threshold_data = self._map.get_data(data_index=self.ui.threshold_type_combo.currentIndex())
-                min_data = numpy.min(threshold_data)
-                max_data = numpy.max(threshold_data)
-                lower_threshold = min_data+1./10000.*self.ui.lower_threshold_slider.value()*(max_data-min_data)
-                upper_threshold = min_data+1./10000.*self.ui.upper_threshold_slider.value()*(max_data-min_data)
+            else:
 
-                # clear fits from the area which fulfills the threshold condition
-                for ix in range(int(numpy.ceil(fit_area[0])), int(numpy.floor(fit_area[1]))):
-                        if lower_threshold <= threshold_data[ix] >= upper_threshold:
-                            self._map.clear_fit(pixel=ix, emit=True)
+                return
 
     def cb_fit_push_button(self):
 
@@ -478,13 +475,15 @@ class FittingWidget(QWidget):
                                         spectrum[self.ui.lower_limit_slider.value():self.ui.upper_limit_slider.value(), 1],
                                         p0=start_parameters, bounds=(fit_lower_boundaries, fit_upper_boundaries))
 
-                                    # save fit
+                                    # check if this is the last cleared fit in this column
                                     if numpy.sum(numpy.logical_and(
                                                     lower_threshold <= threshold_data[ix, iy:1+int(numpy.floor(fit_area[3]))],
                                                     threshold_data[ix, iy] <= upper_threshold)) == 1:
+                                        # save fit
                                         self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
                                                           pixel=[ix, iy], emit=True)
                                     else:
+                                        # save fit
                                         self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
                                                           pixel=[ix, iy], emit=False)
 
@@ -507,59 +506,9 @@ class FittingWidget(QWidget):
                             i_px += 1
                             progress_dialog.setValue(i_px)
 
-            else:  # TODO: build 1D fitting
+            else:
 
-                # get the area to fit
-                if self.ui.area_slider_x2.value() < self.ui.area_slider_x1.value():
-                    x2 = self.ui.area_slider_x1.value()
-                    x1 = self.ui.area_slider_x2.value()
-                else:
-                    x1 = self.ui.area_slider_x1.value()
-                    x2 = self.ui.area_slider_x2.value()
-                fit_area = [x1, x2]
-
-                # threshold settings
-                threshold_data = self._map.get_data(data_index=1+self.ui.threshold_type_combo.currentIndex())
-                min_data = numpy.min(threshold_data)
-                max_data = numpy.max(threshold_data)
-                lower_threshold = min_data+1./10000.*self.ui.lower_threshold_slider.value()*(max_data-min_data)
-                upper_threshold = min_data+1./10000.*self.ui.upper_threshold_slider.value()*(max_data-min_data)
-
-                # number of pixels to fit
-                n_pixels = numpy.count_nonzero(
-                    lower_threshold <= threshold_data[int(numpy.ceil(fit_area[0])):int(numpy.floor(fit_area[1]))] <= upper_threshold)
-
-                # create progressbar dialog
-                progress_dialog = QProgressDialog('', '', 0, n_pixels, self._app.windows['mapWindow'])
-                progress_dialog.setWindowTitle('Fitting')
-                progress_dialog.setWindowModality(Qt.WindowModal)
-                progress_dialog.setCancelButton(None)
-                progress_dialog.show()
-
-                i_px = 0
-                for ix in range(int(numpy.ceil(fit_area[0])), 1+int(numpy.floor(fit_area[1]))):
-                    if lower_threshold <= threshold_data[ix] >= upper_threshold:
-
-                        # load spectrum
-                        spectrum = self._map.get_spectrum(pixel=ix)
-
-                        # perform fit
-                        try:
-                            fit_optimized_parameters, covariance = curve_fit(
-                                fit_function,
-                                spectrum[self.ui.lower_limit_slider.value():self.ui.upper_limit_slider.value(), 0],
-                                spectrum[self.ui.lower_limit_slider.value():self.ui.upper_limit_slider.value(), 1],
-                                p0=fit_initial_parameters, bounds=(fit_lower_boundaries, fit_upper_boundaries))
-
-                            # save fit
-                            self._map.set_fit(fit_functions, fit_initial_parameters, fit_optimized_parameters,
-                                              pixel=[ix])
-                        except RuntimeError:
-                                print('Fitting failed for pixel ', ix)
-
-                        # update progress bar
-                        i_px += 1
-                        progress_dialog.setValue(i_px)
+                return
         
     def cb_function_selected(self, index):
 
@@ -702,6 +651,11 @@ class FittingWidget(QWidget):
 
 
 class FittingWindow(QMainWindow):
+
+    """
+    FittingWindow
+    The fitting window hosts a fitting widget for each loaded map.
+    """
 
     def __init__(self, parent=None):
 

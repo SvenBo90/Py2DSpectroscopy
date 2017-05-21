@@ -17,6 +17,9 @@ class AddMicrographDialog(QDialog):
     with the map.
     """
 
+    # TODO: make data selectable in this dialog
+    # TODO: make micrographs usable as first data in this dialog
+
     def __init__(self, parent, file_name):
 
         # call widget init

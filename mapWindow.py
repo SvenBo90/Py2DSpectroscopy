@@ -5,7 +5,7 @@ from matplotlib import image
 from skimage import transform
 import webbrowser
 # import PyQt5 elements
-from PyQt5.QtCore import QRect, Qt
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog, QMainWindow, QMessageBox, \
     QProgressDialog, QWidget
 # import UI
