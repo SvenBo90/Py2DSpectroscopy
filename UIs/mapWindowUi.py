@@ -136,6 +136,23 @@ class UiMapWindow(object):
         self.action_vertically.setEnabled(False)
         self.flip_menu.addAction(self.action_vertically)
 
+        # flip map menu
+        self.rotate_menu = self.tools_menu.addMenu('Rotate map')
+
+        # flip horizontally action
+        self.action_clockwise = QAction(map_window)
+        self.action_clockwise.setObjectName("action_clockwise")
+        self.action_clockwise.setText("Clockwise")
+        self.action_clockwise.setEnabled(False)
+        self.rotate_menu.addAction(self.action_clockwise)
+
+        # flip vertically action
+        self.action_anticlockwise = QAction(map_window)
+        self.action_anticlockwise.setObjectName("action_anticlockwise")
+        self.action_anticlockwise.setText("Anticlockwise")
+        self.action_anticlockwise.setEnabled(False)
+        self.rotate_menu.addAction(self.action_anticlockwise)
+
         # about menu
         self.help_menu = self.menu_bar.addMenu('Help')
 

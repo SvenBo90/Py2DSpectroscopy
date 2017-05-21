@@ -257,6 +257,8 @@ class MapWindow(QMainWindow):
         self.ui.action_remove_cosmic_rays.triggered.connect(self.cb_action_remove_cosmic_rays)
         self.ui.action_horizontally.triggered.connect(self.cb_action_horizontally)
         self.ui.action_vertically.triggered.connect(self.cb_action_vertically)
+        self.ui.action_clockwise.triggered.connect(self.cb_action_clockwise)
+        self.ui.action_anticlockwise.triggered.connect(self.cb_action_anticlockwise)
 
         # link actions for the help menu
         self.ui.action_about.triggered.connect(self.cb_action_about)
@@ -337,6 +339,16 @@ class MapWindow(QMainWindow):
 
             # set current data to the new micrograph
             self.ui.tab_widget.currentWidget().ui.data_selection_combo_box.setCurrentIndex(data_id)
+
+    def cb_action_anticlockwise(self):
+
+        # rotate the currently selected map clockwise
+        self._app.maps.get_selected_map().rotate('anticlockwise')
+
+    def cb_action_clockwise(self):
+
+        # rotate the currently selected map clockwise
+        self._app.maps.get_selected_map().rotate('clockwise')
 
     def cb_action_exit(self):
 
@@ -591,9 +603,11 @@ class MapWindow(QMainWindow):
             if self._app.maps.get_selected_map().get_dimension() == 2:
                 self.ui.action_horizontally.setEnabled(True)
                 self.ui.action_vertically.setEnabled(True)
+                self.ui.action_clockwise.setEnabled(True)
+                self.ui.action_anticlockwise.setEnabled(True)
             else:
-                self.ui.action_horizontally.setEnabled(False)
-                self.ui.action_vertically.setEnabled(False)
+                self.ui.action_clockwise.setEnabled(False)
+                self.ui.action_anticlockwise.setEnabled(False)
 
         else:
 
@@ -606,3 +620,5 @@ class MapWindow(QMainWindow):
             self.ui.action_remove_cosmic_rays.setEnabled(False)
             self.ui.action_horizontally.setEnabled(False)
             self.ui.action_vertically.setEnabled(False)
+            self.ui.action_clockwise.setEnabled(False)
+            self.ui.action_anticlockwise.setEnabled(False)

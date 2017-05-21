@@ -593,6 +593,11 @@ class Map2D(Map):
             for i_micrograph in range(len(self._micrographs)):
                 self._micrographs[i_micrograph] = numpy.flip(self._micrographs[i_micrograph], 1)
 
+            # flip fit data
+            self._fit_functions = numpy.flip(self._fit_functions, 0)
+            self._fit_initial_parameters = numpy.flip(self._fit_initial_parameters, 0)
+            self._fit_optimized_parameters = numpy.flip(self._fit_optimized_parameters, 0)
+
             # update focus
             self._focus[0] = self._nx - self._focus[0]
 
@@ -610,6 +615,11 @@ class Map2D(Map):
             # flip micrographs
             for i_micrograph in range(len(self._micrographs)):
                 self._micrographs[i_micrograph] = numpy.flip(self._micrographs[i_micrograph], 0)
+
+            # flip fit data
+            self._fit_functions = numpy.flip(self._fit_functions, 1)
+            self._fit_initial_parameters = numpy.flip(self._fit_initial_parameters, 1)
+            self._fit_optimized_parameters = numpy.flip(self._fit_optimized_parameters, 1)
 
             # update focus
             self._focus[1] = self._ny - self._focus[1]
@@ -801,7 +811,83 @@ class Map2D(Map):
             return self._spectra[self._focus[0], self._focus[1]]
         else:
             return self._spectra[kwargs['pixel'][0], kwargs['pixel'][1], :, :]
-    
+
+    def rotate(self, direction):
+
+        if direction == 'clockwise':
+
+            # rotate data
+            self._data = numpy.swapaxes(self._data, 1, 2)
+            self._data = numpy.flip(self._data, 2)
+
+            # rotate spectra
+            self._spectra = numpy.swapaxes(self._spectra, 0, 1)
+            self._spectra = numpy.flip(self._spectra, 1)
+
+            # rotate micrographs
+            for i_micrograph in range(len(self._micrographs)):
+                self._micrographs[i_micrograph] = numpy.swapaxes(self._micrographs[i_micrograph], 0, 1)
+                self._micrographs[i_micrograph] = numpy.flip(self._micrographs[i_micrograph], 0)
+
+            # rotate fit data
+            self._fit_functions = numpy.swapaxes(self._fit_functions, 0, 1)
+            self._fit_initial_parameters = numpy.swapaxes(self._fit_initial_parameters, 0, 1)
+            self._fit_optimized_parameters = numpy.swapaxes(self._fit_optimized_parameters, 0, 1)
+            self._fit_functions = numpy.flip(self._fit_functions, 1)
+            self._fit_initial_parameters = numpy.flip(self._fit_initial_parameters, 1)
+            self._fit_optimized_parameters = numpy.flip(self._fit_optimized_parameters, 1)
+
+            # update map size
+            tmp = self._nx
+            self._nx = self._ny
+            self._ny = tmp
+
+            # update focus
+            tmp = self._focus
+            self._focus[0] = tmp[1]
+            self._focus[1] = tmp[0]
+            self._focus[1] = self._ny-self._focus[1]
+
+            # emit signal
+            self._app.geometry_changed.emit(self._id)
+
+        elif direction == 'anticlockwise':
+
+            # rotate data
+            self._data = numpy.swapaxes(self._data, 1, 2)
+            self._data = numpy.flip(self._data, 1)
+
+            # rotate spectra
+            self._spectra = numpy.swapaxes(self._spectra, 0, 1)
+            self._spectra = numpy.flip(self._spectra, 0)
+
+            # rotate micrographs
+            for i_micrograph in range(len(self._micrographs)):
+                self._micrographs[i_micrograph] = numpy.swapaxes(self._micrographs[i_micrograph], 0, 1)
+                self._micrographs[i_micrograph] = numpy.flip(self._micrographs[i_micrograph], 1)
+
+            # rotate fit data
+            self._fit_functions = numpy.swapaxes(self._fit_functions, 0, 1)
+            self._fit_initial_parameters = numpy.swapaxes(self._fit_initial_parameters, 0, 1)
+            self._fit_optimized_parameters = numpy.swapaxes(self._fit_optimized_parameters, 0, 1)
+            self._fit_functions = numpy.flip(self._fit_functions, 0)
+            self._fit_initial_parameters = numpy.flip(self._fit_initial_parameters, 0)
+            self._fit_optimized_parameters = numpy.flip(self._fit_optimized_parameters, 0)
+
+            # update map size
+            tmp = self._nx
+            self._nx = self._ny
+            self._ny = tmp
+
+            # update focus
+            tmp = self._focus
+            self._focus[0] = tmp[1]
+            self._focus[1] = tmp[0]
+            self._focus[0] = self._nx-self._focus[0]
+
+            # emit signal
+            self._app.geometry_changed.emit(self._id)
+
     def set_fit(self, fit_functions, fit_initial_parameters, fit_optimized_parameters, **kwargs):
 
         # if no pixel was provided the current pixel is updated
