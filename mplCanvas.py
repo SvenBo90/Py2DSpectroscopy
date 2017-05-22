@@ -443,6 +443,11 @@ class MapCanvas2D(PlotCanvas):
         # set new data
         self._map_plot.set_data(data)
 
+        # check if map size was changed (this means if the map has been rotated)
+        if self._extent != self._map.get_size():
+            self._extent = self._map.get_size()
+            fix_limits = False
+
         # set extent and axes limits
         self._map_plot.set_extent([-0.5, self._extent[0] - 0.5, -0.5, self._extent[1] - 0.5])
         if not fix_limits:

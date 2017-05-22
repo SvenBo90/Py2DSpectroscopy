@@ -843,10 +843,10 @@ class Map2D(Map):
             self._ny = tmp
 
             # update focus
-            tmp = self._focus
+            tmp = [self._focus[0], self._focus[1]]
             self._focus[0] = tmp[1]
             self._focus[1] = tmp[0]
-            self._focus[1] = self._ny-self._focus[1]
+            self._focus[1] = self._ny-tmp[0]
 
             # emit signal
             self._app.geometry_changed.emit(self._id)
@@ -880,10 +880,10 @@ class Map2D(Map):
             self._ny = tmp
 
             # update focus
-            tmp = self._focus
+            tmp = [self._focus[0], self._focus[1]]
             self._focus[0] = tmp[1]
             self._focus[1] = tmp[0]
-            self._focus[0] = self._nx-self._focus[0]
+            self._focus[0] = self._nx-tmp[1]
 
             # emit signal
             self._app.geometry_changed.emit(self._id)
