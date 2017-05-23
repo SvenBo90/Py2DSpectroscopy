@@ -575,7 +575,7 @@ class MicrographCanvas(PlotCanvas):
     def add_toolbar(self, parent):
 
         # add toolbar
-        self._toolbar = MicrograpCanvasToolbar(self._fig.canvas, parent)
+        self._toolbar = MicrographCanvasToolbar(self._fig.canvas, parent)
 
     def get_axes(self):
 
@@ -604,7 +604,7 @@ class MicrographCanvas(PlotCanvas):
         self._fig.canvas.draw()
 
 
-class MicrograpCanvasToolbar(NavigationToolbar):
+class MicrographCanvasToolbar(NavigationToolbar):
 
     """
     MicrograpCanvashToolbar

@@ -20,7 +20,6 @@ class FittingWidget(QWidget):
     """
 
     # TODO: 1D Map Fitting
-    # TODO: Fit parameter for pixel selection
 
     def __init__(self, parent, map_handle):
 

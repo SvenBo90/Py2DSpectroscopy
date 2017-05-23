@@ -27,11 +27,6 @@ class Map:
         self._resolution = 0        # the pixels on the CCD
         self._selected_data = 0     # a flag for the currently selected data
 
-    def set_app(self, app):
-
-        # set map list
-        self._app = app
-
     def get_data_names(self):
 
         # return data names
@@ -72,289 +67,25 @@ class Map:
         # return the currently selected data
         return self._selected_data
 
-    def set_selected_data(self, selected_data):
+    def set_app(self, app):
 
-        # update data selection if the new data is different from the old one
-        if selected_data != self._selected_data:
-            self._selected_data = selected_data
-
-            # emit signal
-            self._app.selected_data_changed.emit(self._id)
+        # set map list
+        self._app = app
 
     def set_id(self, map_id):
 
         # set map id
         self._id = map_id
 
+    def set_selected_data(self, selected_data):
 
-class Map1D(Map):
+        # update data selection if the new data is different from the old one
+        if selected_data != self._selected_data:
 
-    """
-    Map1D
-    Class for one-dimensional maps such as gate dependences or power dependences.
-    """
+            self._selected_data = selected_data
 
-    # TODO: Build the Map1D class
-
-    def __init__(self, map_id, file_name):
-
-        # call super init
-        super(Map1D, self).__init__()
-
-        # set dimension of the map
-        self._dimension = 1
-
-        # set the map id
-        self._id = map_id
-
-        # get the directory from path and load the data file
-        dir_name = path.dirname(file_name)
-        file_data = numpy.loadtxt(file_name)
-
-        # read the number of pixels and check for consistency
-        self._nx = int(file_data[-1, 0]) + 1
-
-        # read the number of pixels on the CCD from the first spectrum
-        spectrum = numpy.loadtxt(dir_name + '/spectrum_0.asc')
-        self._resolution = len(spectrum)
-
-        # create variables for the data
-        self._spectra = numpy.zeros((self._nx, self._resolution, 2))
-        self._data = numpy.zeros((file_data.shape[1], self._nx))
-
-        # read column names and map name
-        self._data_names = {0: 'spectra', 1: 'intensity'}
-        file_lines = open(file_name).readlines()
-        for i_line in range(len(file_lines)):
-            line_split = file_lines[i_line].split()
-            if len(line_split) > 1:
-                if line_split[1] == 'Filename:':
-                    self._map_name = line_split[2][:-4]
-                if line_split[1] == 'Column' and int(line_split[2][:-1]) > 1:
-                    next_split = file_lines[i_line + 1].split()
-                    self._data_names[int(line_split[2][:-1])] = ' '.join(next_split[2:])
-
-        # check if there are .npy files available in order to accelerate the loading
-        if path.isfile(dir_name + '/spectra.npy') and path.isfile(dir_name + '/wavelengths.npy'):
-
-            # load data from npy files
-            self._spectra[:, :, 0] = numpy.load(dir_name + '/wavelengths.npy')
-            self._spectra[:, :, 1] = numpy.load(dir_name + '/spectra.npy')
-
-            # integrate counts
-            self._data[0, :] = numpy.sum(self._spectra[:, :, 1], axis=1)
-
-            # read other quantities
-            for ix in range(self._nx):
-                self._data[1:, ix] = file_data[ix, 1:]
-
-        else:
-
-            # create progressbar dialog
-            progress_dialog = QProgressDialog('', '', 0, self._nx,
-                                              QApplication.instance().windows['mapWindow'])
-            progress_dialog.setWindowTitle('Loading Map')
-            progress_dialog.setWindowModality(Qt.WindowModal)
-            progress_dialog.setCancelButton(None)
-            progress_dialog.show()
-
-            # read data
-            for ix in range(self._nx):
-                spectrum = numpy.loadtxt(dir_name + '/spectrum_' + str(ix) + '.asc')
-                spectrum[:, 0] = 1e9 * spectrum[:, 0]
-                self._spectra[ix, :, :] = spectrum
-                self._data[0, ix] = numpy.sum(spectrum[:, 1])
-                self._data[1:, ix] = file_data[ix, 1:]
-                progress_dialog.setValue(ix + 1)
-
-            # save .npy files for the next time
-            numpy.save(dir_name + '/wavelengths.npy', self._spectra[:, :, 0])
-            numpy.save(dir_name + '/spectra.npy', self._spectra[:, :, 1])
-
-        # check which columns are trivial (==0)
-        col_trivial = []
-        for i_data in range(len(self._data)):
-            if i_data < len(self._data) and sum(self._data[i_data, :]) == 0:
-                col_trivial.append(i_data)
-
-        # delete columns and data names
-        for i_col in range(len(col_trivial)-1, -1, -1):
-            del self._data_names[col_trivial[i_col]+1]
-            self._data = numpy.delete(self._data, col_trivial[i_col], 0)
-
-        # sort data names dictionary
-        i_data = 0
-        for key in self._data_names.keys():
-            self._data_names[i_data] = self._data_names.pop(key)
-            i_data += 1
-
-        # create variables for the fit data
-        self._fit_functions = numpy.zeros((self._nx, 6))
-        self._fit_initial_parameters = numpy.zeros((self._nx, 6, 4))
-        self._fit_initial_parameters[:] = numpy.NAN
-        self._fit_optimized_parameters = numpy.zeros((self._nx, 6, 4))
-        self._fit_optimized_parameters[:] = numpy.NAN
-
-        # set focus to the center of the map
-        self._focus = int(self._nx / 2)
-
-        # set fit area
-        self._fit_area = (-0.5, self._nx)
-
-    def get_data(self, **kwargs):
-
-        # if no data index is given, return the currently selected data
-        if 'data_index' in kwargs.keys():
-            data_index = kwargs['data_index']
-        else:
-            data_index = self._selected_data
-
-        # check if the id belongs to a data or a micrograph or a fit parameter
-        if data_index == 0:
-
-            return numpy.transpose(self._spectra[:, :, 1])
-
-        elif 0 < data_index <= len(self._data):
-
-            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
-                return self._data[data_index-1]
-            elif kwargs['pixel'] == -2:
-                return self._data[data_index-1][self._focus]
-            else:
-                return self._data[data_index-1][kwargs['pixel']]
-
-        else:
-
-            # return fit data
-            data_index -= len(self._data)+1
-            parameters = []
-            for i_peak in range(6):
-                if numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 3)) > 0:
-                    parameters.append([i_peak, 0])
-                    parameters.append([i_peak, 1])
-                    parameters.append([i_peak, 2])
-                    parameters.append([i_peak, 3])
-                elif numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 1)) > 0 or \
-                        numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 2)) > 0:
-                    parameters.append([i_peak, 0])
-                    parameters.append([i_peak, 1])
-                    parameters.append([i_peak, 2])
-            return self._fit_optimized_parameters[:, parameters[data_index][0], parameters[data_index][1]]
-
-    def get_data_name(self, **kwargs):
-
-        # if no data index is given, return the currently selected data
-        if 'data_index' in kwargs.keys():
-            data_index = kwargs['data_index']
-        else:
-            data_index = self._selected_data
-
-        # check whether a data or a micrograph is selected
-        if data_index < len(self._data)+1:
-
-            # return data name
-            return self._data_names[data_index]
-
-        else:
-
-            # return parameter name
-            data_index = data_index - len(self._data) - 1
-            parameters = []
-            for i_peak in range(6):
-                if numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 3)) > 0:
-                    parameters.append([i_peak, 'A'])
-                    parameters.append([i_peak, 'B'])
-                    parameters.append([i_peak, 'C'])
-                    parameters.append([i_peak, 'D'])
-                elif numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 1)) > 0 or \
-                        numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 2)) > 0:
-                    parameters.append([i_peak, 'A'])
-                    parameters.append([i_peak, 'B'])
-                    parameters.append([i_peak, 'C'])
-            return parameters[data_index][1]+str(parameters[data_index][0])
-
-    def get_fit(self, **kwargs):
-
-        # if no pixel was provided the current pixel is returned
-        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
-            px = self._focus
-        else:
-            px = kwargs['pixel']
-
-        return self._fit_functions[px, :], self._fit_initial_parameters[px, :, :], self._fit_optimized_parameters[px, :, :]
-
-    def get_fit_functions(self):
-
-        return self._fit_functions[:, :]
-
-    def get_size(self):
-
-        # return the size of the map
-        return [self._nx]
-
-    def get_spectrum(self, **kwargs):
-
-        # if no pixel is given, return the focussed pixel's spectrum
-        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
-            return self._spectra[self._focus, :, :]
-        else:
-            return self._spectra[kwargs['pixel'], :, :]
-
-    def set_fit(self, fit_functions, fit_initial_parameters, fit_optimized_parameters, **kwargs):
-
-        # if no pixel was provided the current pixel is updated
-        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
-            px = self._focus
-        else:
-            px = kwargs['pixel']
-
-        # clear the old fit data
-        self._fit_functions[px, :] = numpy.zeros(6)
-        self._fit_initial_parameters[px, :, :] = numpy.NAN
-        self._fit_optimized_parameters[px, :, :] = numpy.NAN
-
-        # set new fit data
-        i_parameter = 0
-        for i_peak in range(len(fit_functions)):
-            if fit_functions[i_peak] == 1:
-                self._fit_functions[px, i_peak] = 1
-                self._fit_initial_parameters[px, i_peak, :3] = fit_initial_parameters[i_parameter:i_parameter+3]
-                self._fit_initial_parameters[px, i_peak, 3] = 0
-                self._fit_optimized_parameters[px, i_peak, :3] = fit_optimized_parameters[i_parameter:i_parameter+3]
-                self._fit_optimized_parameters[px, i_peak, 3] = 0
-                i_parameter += 3
-            elif fit_functions[i_peak] == 2:
-                self._fit_functions[px, i_peak] = 2
-                self._fit_initial_parameters[px, i_peak, :3] = fit_initial_parameters[i_parameter:i_parameter+3]
-                self._fit_initial_parameters[px, i_peak, 3] = 0
-                self._fit_optimized_parameters[px, i_peak, :3] = fit_optimized_parameters[i_parameter:i_parameter+3]
-                self._fit_optimized_parameters[px, i_peak, 3] = 0
-                i_parameter += 3
-            elif fit_functions[i_peak] == 3:
-                self._fit_functions[px, i_peak] = 3
-                self._fit_initial_parameters[px, i_peak, :] = fit_initial_parameters[i_parameter:i_parameter+4]
-                self._fit_optimized_parameters[px, i_peak, :] = fit_optimized_parameters[i_parameter:i_parameter+4]
-                i_parameter += 4
-
-    def set_focus(self, focus):
-
-        # set focus if it is within the map
-        if 0 <= numpy.round(focus) < self._nx:
-            self._focus = int(numpy.round(focus))
-
-    def set_spectrum(self, spectrum, **kwargs):
-
-        # if no pixel was provided update the focused pixel
-        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
-            px = self._focus
-        else:
-            px = kwargs['pixel']
-
-        # update spectrum
-        self._spectra[px, :, :] = spectrum
-
-        # update integrated counts
-        self._data[0, px] = numpy.sum(spectrum[:, 1])
+            # emit signal
+            self._app.selected_data_changed.emit(self._id)
 
 
 class Map2D(Map):
@@ -581,6 +312,7 @@ class Map2D(Map):
 
     def flip(self, direction):
 
+        # flip the map horizontally
         if direction == 'horizontally':
 
             # flip data
@@ -604,6 +336,7 @@ class Map2D(Map):
             # emit signal
             self._app.geometry_changed.emit(self._id)
 
+        # flip the map vertically
         elif direction == 'vertically':
 
             # flip data
@@ -635,24 +368,34 @@ class Map2D(Map):
         else:
             data_index = self._selected_data
 
-        # check if the id belongs to a data or a micrograph or a fit parameter
+        # return a data
         if data_index < len(self._data):
 
             # check if the whole map data (pixel = -1) or the focussed pixel (pixel = -2)
             # or a specific pixel (pixel = [x,y]) are requested
             if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                # return whole map data
                 return self._data[data_index]
+
             elif kwargs['pixel'] == -2:
+
+                # return data at focused pixel
                 return self._data[data_index][self._focus[0], self._focus[1]]
+
             else:
+
+                # return data at requested pixel
                 return self._data[data_index][kwargs['pixel'][0], kwargs['pixel'][1]]
 
+        # return a micrograph
         elif data_index < len(self._data) + len(self._micrographs):
 
             # return micrograph
             data_index -= len(self._data)
             return self._micrographs[data_index]
-            
+
+        # return a fit data
         else:
             
             # check which fit parameters are there
@@ -955,7 +698,7 @@ class Map2D(Map):
         # set interval
         if side == 'left':
             self._interval[0] = value
-        if side == 'right':
+        elif side == 'right':
             self._interval[1] = value
 
         # recalculate intensities
@@ -1004,44 +747,17 @@ class MapList:
         self._maps = {}
 
         # set flags for selected map and map counter
-        self._selected = -1
+        self._selected = None
         self._counter = 0
         self._id_counter = 0
 
         # call super init
         super(MapList, self).__init__()
 
-    def append_1d(self, file_name):
-
-        # check if the loaded file is a .py2ds file
-        if file_name[-6:] == '.py2ds':
-
-            # pickle map object from .py2ds file
-            map_file = open(file_name, 'rb')
-            self._maps[self._id_counter] = pickle.load(map_file)
-            self._maps[self._id_counter].set_id(self._id_counter)
-            self._maps[self._id_counter].set_map_list(self)
-
-        else:
-
-            # create a new map object and select this map
-            self._maps[self._id_counter] = Map1D(self._id_counter, file_name)
-            self._maps[self._id_counter].set_map_list(self)
-
-        # increase the map  and id counter
-        self._counter += 1
-        self._id_counter += 1
-
-        # emit signal
-        self._app.map_added.emit(self._id_counter - 1)
-
-        # return map object
-        return self._maps[self._id_counter - 1]
-
     def append_2d(self, file_name):
 
         # check if the loaded file is a .py2dl file
-        if file_name[-6:] == '.py2dl':
+        if file_name[-6:] == '.py2ds':
 
             # pickle map object from .py2dl file
             map_file = open(file_name, 'rb')
@@ -1055,7 +771,7 @@ class MapList:
             self._maps[self._id_counter] = Map2D(self._id_counter, file_name)
             self._maps[self._id_counter].set_app(self._app)
 
-        # increase the map  and id counter
+        # increase the map and id counter
         self._counter += 1
         self._id_counter += 1
 
