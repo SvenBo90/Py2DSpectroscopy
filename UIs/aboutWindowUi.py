@@ -30,7 +30,7 @@ class UiAbout(object):
         self.label_2 = QLabel(about_window)
         self.label_2.setGeometry(QRect(10, 0, 311, 81))
         self.label_2.setObjectName("label_2")
-        self.label_2.setText("<html><head/><body><p><span style=\" font-weight:600;\">Py2DLuminescence 0.1.4</span>"
+        self.label_2.setText("<html><head/><body><p><span style=\" font-weight:600;\">Py2DLuminescence 0.2.0</span>"
                              "</p><p>Sven Borghardt, <a href=\"mailto:s.borghardt@fz-juelich.de\">"
                              "<span style=\" text-decoration: underline; color:#0000ff;\">s.borghardt@fz-juelich.de"
                              "</span></a></p></body></html>")
