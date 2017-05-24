@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog, QMainWindow
 from UIs.mapWindowUi import UiMapWindow
 from UIs.mapTabWidgetUi import UiMapTabWidget
 from addMicrographDialog import AddMicrographDialog
+from exportDialog import ExportDialog
 # import map canvas
 from mplCanvas import MapCanvas1D, MapCanvas2D
 
@@ -197,7 +198,7 @@ class MapTab(QWidget):
                 if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] > 0)) > 0:
                     self.ui.data_selection_combo_box.addItems(['FWHM'+subscripts[i_peak]])
         else:
-            for i_peak in range(6):  # TODO: do the job for 1D
+            for i_peak in range(6):
                 if numpy.sum(numpy.int_(fit_functions[:, i_peak] == 3)) > 0:
                     self.ui.data_selection_combo_box.addItems(['I'+str(i_peak), 'λ'+str(i_peak),
                                                                'σ'+str(i_peak), 'γ'+str(i_peak)])
@@ -244,6 +245,7 @@ class MapWindow(QMainWindow):
         self.ui.action_1d_map.triggered.connect(self.cb_action1d_map)
         self.ui.action_2d_map.triggered.connect(self.cb_action2d_map)
         self.ui.action_save.triggered.connect(self.cb_action_save)
+        self.ui.action_export.triggered.connect(self.cb_action_export)
         self.ui.action_exit.triggered.connect(self.cb_action_exit)
 
         # link actions for the view menu
@@ -359,6 +361,26 @@ class MapWindow(QMainWindow):
         # check the answer
         if reply == QMessageBox.Yes:
             self._app.closeAllWindows()
+
+    def cb_action_export(self):
+
+        # open export dialog
+        export_dialog = ExportDialog(self)
+        export_dialog.exec_()
+
+        # check if the micrograph dialog has been submitted
+        if export_dialog.result() == 1:
+
+            # get micrograph file
+            file_name = QFileDialog.getSaveFileName(self._app.windows['mapWindow'], 'Export Data', '')
+            file_name = file_name[0]
+
+            if file_name == '':
+
+                return
+
+            numpy.savetxt(file_name,
+                          self._app.maps.get_selected_map().get_data(data_index=export_dialog.get_data_selection()))
 
     def cb_action_fitting(self):
 
@@ -592,6 +614,10 @@ class MapWindow(QMainWindow):
 
             self.ui.action_save.setEnabled(True)
             if self._app.maps.get_selected_map().get_dimension() == 2:
+                self.ui.action_export.setEnabled(True)
+            else:
+                self.ui.action_export.setEnabled(False)
+            if self._app.maps.get_selected_map().get_dimension() == 2:
                 self.ui.action_add_micrograph.setEnabled(True)
             else:
                 self.ui.action_add_micrograph.setEnabled(False)
@@ -612,6 +638,7 @@ class MapWindow(QMainWindow):
         else:
 
             self.ui.action_save.setEnabled(False)
+            self.ui.action_export.setEnabled(False)
             self.ui.action_add_micrograph.setEnabled(False)
             self.ui.action_fitting.setEnabled(False)
             self.ui.action_spectrum.setEnabled(False)

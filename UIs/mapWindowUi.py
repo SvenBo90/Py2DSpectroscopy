@@ -61,6 +61,13 @@ class UiMapWindow(object):
         self.action_save.setEnabled(False)
         self.file_menu.addAction(self.action_save)
 
+        # save action
+        self.action_export = QAction(map_window)
+        self.action_export.setObjectName("action_export")
+        self.action_export.setText("Export")
+        self.action_export.setEnabled(False)
+        self.file_menu.addAction(self.action_export)
+
         # add separator
         self.file_menu.addSeparator()
 
