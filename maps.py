@@ -243,6 +243,34 @@ class Map2D(Map):
                     self._data[2, ix, iy] = data_array[i_px, 1]
                     i_px += 1
 
+        # .dat2 files are acquired in the J. Vuckovic groupd at Stanford
+        elif file_name[-5:] == '.dat2':
+
+            # set map name to the file name
+            self._map_name = file_name[len(dir_name)+1:-5]
+
+            # read text file
+            file_data = numpy.loadtxt(file_name)
+
+            # set the resolution to the number of pixels of the CCD
+            self._resolution = 1
+
+            # get map shape
+            self._nx = file_data.shape[0]
+            self._ny = file_data.shape[1]
+
+            # create data structures for spectra and position data
+            self._spectra = numpy.zeros((self._nx, self._ny, self._resolution, 2))
+            self._data_names = {0: 'intensity'}
+            self._data = numpy.zeros((1, self._nx, self._ny))
+
+            # read intensities
+            for ix in range(self._nx):
+                for iy in range(self._ny):
+                        self._spectra[ix, iy, :, 0] = 0
+                        self._spectra[ix, iy, :, 1] = file_data[ix, iy]
+                        self._data[0, ix, iy] = file_data[ix, iy]
+
         # check which columns are trivial (==0)
         col_trivial = []
         for i_data in range(len(self._data)):
@@ -400,59 +428,64 @@ class Map2D(Map):
             
             # check which fit parameters are there
             data_index -= len(self._data) + len(self._micrographs)
+
+            # get fit functions and fit parameters once
+            fit_functions = self._fit_functions
+            fit_optimized_parameters = self._fit_optimized_parameters
+
             parameters = []
             for i_peak in range(6):
-                if numpy.sum(numpy.int_(self._fit_functions[:, :, i_peak] > 0)) > 0:
+                if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] > 0)) > 0:
                     parameters.append([i_peak, 0])
                     parameters.append([i_peak, 1])
-                if numpy.sum(numpy.int_(self._fit_functions[:, :, i_peak] == 2)) > 0 or \
-                        numpy.sum(numpy.int_(self._fit_functions[:, :, i_peak] == 3)) > 0:
+                if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 2)) > 0 or \
+                        numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 3)) > 0:
                     parameters.append([i_peak, 2])
-                if numpy.sum(numpy.int_(self._fit_functions[:, :, i_peak] == 1)) > 0 or \
-                        numpy.sum(numpy.int_(self._fit_functions[:, :, i_peak] == 3)) > 0:
+                if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 1)) > 0 or \
+                        numpy.sum(numpy.int_(fit_functions[:, :, i_peak] == 3)) > 0:
                     parameters.append([i_peak, 3])
-                if numpy.sum(numpy.int_(self._fit_functions[:, :, i_peak] > 0)) > 0:
+                if numpy.sum(numpy.int_(fit_functions[:, :, i_peak] > 0)) > 0:
                     parameters.append([i_peak, 4])
 
             # return intensities
             if parameters[data_index][1] == 0:
-                return self._fit_optimized_parameters[:, :, parameters[data_index][0], 0]
+                return fit_optimized_parameters[:, :, parameters[data_index][0], 0]
 
             # return central energies
             elif parameters[data_index][1] == 1:
-                return self._fit_optimized_parameters[:, :, parameters[data_index][0], 1]
+                return fit_optimized_parameters[:, :, parameters[data_index][0], 1]
 
             # return sigma
             elif parameters[data_index][1] == 2:
                 sigma = numpy.zeros((self._nx, self._ny))
                 sigma[:] = numpy.NAN
-                sigma_from_gaussian = self._fit_optimized_parameters[:, :, parameters[data_index][0], 2][self._fit_functions[:, :, parameters[data_index][0]] == 2]
-                sigma_from_voigt = self._fit_optimized_parameters[:, :, parameters[data_index][0], 2][self._fit_functions[:, :, parameters[data_index][0]] == 3]
-                sigma[self._fit_functions[:, :, parameters[data_index][0]] == 2] = sigma_from_gaussian
-                sigma[self._fit_functions[:, :, parameters[data_index][0]] == 3] = sigma_from_voigt
+                sigma_from_gaussian = fit_optimized_parameters[:, :, parameters[data_index][0], 2][fit_functions[:, :, parameters[data_index][0]] == 2]
+                sigma_from_voigt = fit_optimized_parameters[:, :, parameters[data_index][0], 2][fit_functions[:, :, parameters[data_index][0]] == 3]
+                sigma[fit_functions[:, :, parameters[data_index][0]] == 2] = sigma_from_gaussian
+                sigma[fit_functions[:, :, parameters[data_index][0]] == 3] = sigma_from_voigt
                 return 1000*sigma
 
             # return gamma
             elif parameters[data_index][1] == 3:
                 gamma = numpy.zeros((self._nx, self._ny))
                 gamma[:] = numpy.NAN
-                gamma_from_lorentzian = self._fit_optimized_parameters[:, :, parameters[data_index][0], 2][self._fit_functions[:, :, parameters[data_index][0]] == 1]
-                gamma_from_voigt = self._fit_optimized_parameters[:, :, parameters[data_index][0], 3][self._fit_functions[:, :, parameters[data_index][0]] == 3]
-                gamma[self._fit_functions[:, :, parameters[data_index][0]] == 1] = gamma_from_lorentzian
-                gamma[self._fit_functions[:, :, parameters[data_index][0]] == 3] = gamma_from_voigt
+                gamma_from_lorentzian = fit_optimized_parameters[:, :, parameters[data_index][0], 2][fit_functions[:, :, parameters[data_index][0]] == 1]
+                gamma_from_voigt = fit_optimized_parameters[:, :, parameters[data_index][0], 3][fit_functions[:, :, parameters[data_index][0]] == 3]
+                gamma[fit_functions[:, :, parameters[data_index][0]] == 1] = gamma_from_lorentzian
+                gamma[fit_functions[:, :, parameters[data_index][0]] == 3] = gamma_from_voigt
                 return 1000*gamma
 
             # return FWHM
             elif parameters[data_index][1] == 4:
                 fwhm = numpy.zeros((self._nx, self._ny))
                 fwhm[:] = numpy.NAN
-                sigma_from_gaussian = self._fit_optimized_parameters[:, :, parameters[data_index][0], 2][self._fit_functions[:, :, parameters[data_index][0]] == 2]
-                gamma_from_lorentzian = self._fit_optimized_parameters[:, :, parameters[data_index][0], 2][self._fit_functions[:, :, parameters[data_index][0]] == 1]
-                gamma_from_voigt = self._fit_optimized_parameters[:, :, parameters[data_index][0], 3][self._fit_functions[:, :, parameters[data_index][0]] == 3]
-                sigma_from_voigt = self._fit_optimized_parameters[:, :, parameters[data_index][0], 2][self._fit_functions[:, :, parameters[data_index][0]] == 3]
-                fwhm[self._fit_functions[:, :, parameters[data_index][0]] == 1] = 2*gamma_from_lorentzian
-                fwhm[self._fit_functions[:, :, parameters[data_index][0]] == 2] = 2.35482*sigma_from_gaussian
-                fwhm[self._fit_functions[:, :, parameters[data_index][0]] == 3] = 0.5346*2.*gamma_from_voigt+numpy.sqrt(0.2166*4.*gamma_from_voigt**2.+2.35482**2.*sigma_from_voigt**2.)
+                sigma_from_gaussian = fit_optimized_parameters[:, :, parameters[data_index][0], 2][fit_functions[:, :, parameters[data_index][0]] == 2]
+                gamma_from_lorentzian = fit_optimized_parameters[:, :, parameters[data_index][0], 2][fit_functions[:, :, parameters[data_index][0]] == 1]
+                gamma_from_voigt = fit_optimized_parameters[:, :, parameters[data_index][0], 3][fit_functions[:, :, parameters[data_index][0]] == 3]
+                sigma_from_voigt = fit_optimized_parameters[:, :, parameters[data_index][0], 2][fit_functions[:, :, parameters[data_index][0]] == 3]
+                fwhm[fit_functions[:, :, parameters[data_index][0]] == 1] = 2*gamma_from_lorentzian
+                fwhm[fit_functions[:, :, parameters[data_index][0]] == 2] = 2.35482*sigma_from_gaussian
+                fwhm[fit_functions[:, :, parameters[data_index][0]] == 3] = 0.5346*2.*gamma_from_voigt+numpy.sqrt(0.2166*4.*gamma_from_voigt**2.+2.35482**2.*sigma_from_voigt**2.)
                 return 1000*fwhm
 
     def get_data_name(self, **kwargs):

@@ -16,7 +16,6 @@ from exportDialog import ExportDialog
 # import map canvas
 from mplCanvas import MapCanvas1D, MapCanvas2D
 
-
 class MapTab(QWidget):
 
     def __init__(self, map_handle):
@@ -485,6 +484,9 @@ class MapWindow(QMainWindow):
             progress_dialog.setCancelButton(None)
             progress_dialog.show()
 
+            # start live plotting
+            self._app.start_live_plotting()
+
             for ix in range(nx):
                 for iy in range(ny):
                     spectrum = map_handle.get_spectrum(pixel=[ix, iy])
@@ -511,12 +513,15 @@ class MapWindow(QMainWindow):
                     spectrum[diff > threshold, 1] = spectrum_neighbours[diff > threshold]
 
                     if numpy.sum(diff > threshold) > 0:
-                        if iy == ny-1 or (ix == map_handle.get_focus()[0] and iy == map_handle.get_focus()[1]):
+                        if ix == map_handle.get_focus()[0] and iy == map_handle.get_focus()[1]:
                             map_handle.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
                         else:
                             map_handle.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
 
                     progress_dialog.setValue(ix * ny + iy + 1)
+
+            # stop live plotting
+            self._app.stop_live_plotting()
 
     def cb_action_save(self):
 

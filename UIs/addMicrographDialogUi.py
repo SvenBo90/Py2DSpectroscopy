@@ -33,7 +33,7 @@ class UiAddMicrographDialog(object):
 
         # widget for the toolbar
         self.toolbar_widget = QWidget(add_micrograph_dialog)
-        self.toolbar_widget.setGeometry(QRect(10, 450, 400, 50))
+        self.toolbar_widget.setGeometry(QRect(10, 430, 400, 50))
         self.toolbar_widget.setObjectName("toolbar_widget")
 
         # widget for buttons controlling the points on the plots

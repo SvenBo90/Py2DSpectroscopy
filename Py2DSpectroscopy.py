@@ -1,5 +1,7 @@
 # general imports
 import sys
+import threading
+import time
 # import PyQt5 elements
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QApplication
@@ -14,6 +16,19 @@ from pixelInformationWindow import PixelInformationWindow
 from spectrumWindow import SpectrumWindow
 
 
+class StoppableThread(threading.Thread):
+
+    def __init__(self, name, target):
+        super(StoppableThread, self).__init__(name=name, target=target)
+        self._stop_event = threading.Event()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
+
+
 class Py2DSpectroscopy(QApplication):
 
     """
@@ -21,8 +36,6 @@ class Py2DSpectroscopy(QApplication):
     This is the main class of the application. It controls the different windows
     and saves the maps in a map list.
     """
-
-    # TODO: Map geometry operations: rotation
 
     # define list signals
     map_added = pyqtSignal(int)             # int: map id
@@ -57,6 +70,9 @@ class Py2DSpectroscopy(QApplication):
             "pixelInformationWindow": PixelInformationWindow(),
             "spectrumWindow": SpectrumWindow()
         }
+
+        # thread for live plotting
+        self._live_plotting_thread = None
 
         # connect to map list signals
         self.map_added.connect(self.windows['backgroundWindow'].add_widget)
@@ -99,6 +115,25 @@ class Py2DSpectroscopy(QApplication):
 
         # show the map window
         self.windows['mapWindow'].show()
+
+    def live_plotting(self):
+
+        print(threading.currentThread().getName(), 'Starting')
+        while not threading.current_thread().stopped():
+            print(threading.currentThread().getName(), 'Working')
+            time.sleep(0.5)
+            self.windows['mapWindow'].update_data(self.maps.get_selected_map().get_id())
+            print(threading.current_thread().stopped())
+        self.windows['mapWindow'].update_data(self.maps.get_selected_map().get_id())
+
+    def start_live_plotting(self):
+
+        self._live_plotting_thread = StoppableThread(name='live_plotting', target=self.live_plotting)
+        self._live_plotting_thread.start()
+
+    def stop_live_plotting(self):
+
+        self._live_plotting_thread.stop()
 
     @staticmethod
     def exit_app():

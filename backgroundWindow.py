@@ -169,6 +169,9 @@ class BackgroundWidget(QWidget):
                 progress_dialog.setCancelButton(progress_dialog_cancel_button)
                 progress_dialog.show()
 
+                # start live plotting
+                self._app.start_live_plotting()
+
                 # remove background on each pixel
                 if self.ui.minimum_counts_radio_button.isChecked():
 
@@ -176,34 +179,25 @@ class BackgroundWidget(QWidget):
 
                         for iy in range(ny):
 
+                            # check if process was cancelled
+                            if progress_dialog.wasCanceled():
+                                break
+
                             # load spectrum
                             spectrum = self._map.get_spectrum(pixel=[ix, iy])
 
                             # remove minimum as a background
                             spectrum[:, 1] = spectrum[:, 1]-numpy.min(spectrum[:, 1])
 
-                            if iy == ny-1 or (ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]):
+                            if ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]:
 
                                 # update spectrum
                                 self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-                                    break
-
                             else:
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
-                                    break
-
-                                else:
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
+                                # update spectrum
+                                self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
 
                             # process events
                             self._app.processEvents()
@@ -221,6 +215,10 @@ class BackgroundWidget(QWidget):
 
                         for iy in range(ny):
 
+                            # check if process was cancelled
+                            if progress_dialog.wasCanceled():
+                                break
+
                             # load spectrum
                             spectrum = self._map.get_spectrum(pixel=[ix, iy])
 
@@ -228,28 +226,15 @@ class BackgroundWidget(QWidget):
                             spectrum[:, 1] = spectrum[:, 1]-numpy.mean(
                                 spectrum[self.ui.lower_boundary_slider.value():self.ui.upper_boundary_slider.value(), 1])
 
-                            if iy == ny-1 or (ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]):
+                            if ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]:
 
                                 # update spectrum
                                 self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-                                    break
-
                             else:
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
-                                    break
-
-                                else:
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
+                                # update spectrum
+                                self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
 
                             # process events
                             self._app.processEvents()
@@ -270,34 +255,25 @@ class BackgroundWidget(QWidget):
 
                         for iy in range(ny):
 
+                            # check if process was cancelled
+                            if progress_dialog.wasCanceled():
+                                break
+
                             # load spectrum
                             spectrum = self._map.get_spectrum(pixel=[ix, iy])
 
                             # remove spectrum at specific pixel as a background
                             spectrum[:, 1] = spectrum[:, 1] - background
 
-                            if iy == ny-1 or (ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]):
+                            if ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]:
 
                                 # update spectrum
                                 self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-                                    break
-
                             else:
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
-                                    break
-
-                                else:
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
+                                # update spectrum
+                                self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
 
                             # process events
                             self._app.processEvents()
@@ -317,34 +293,25 @@ class BackgroundWidget(QWidget):
 
                         for iy in range(ny):
 
+                            # check if process was cancelled
+                            if progress_dialog.wasCanceled():
+                                break
+
                             # load spectrum
                             spectrum = self._map.get_spectrum(pixel=[ix, iy])
 
                             # remove spectrum from file as a background
                             spectrum[:, 1] = spectrum[:, 1]-background[:, 1]
 
-                            if iy == ny-1 or (ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]):
+                            if ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]:
 
                                 # update spectrum
                                 self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-                                    break
-
                             else:
 
-                                # check if process was cancelled
-                                if progress_dialog.wasCanceled():
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=True)
-                                    break
-
-                                else:
-
-                                    # update spectrum
-                                    self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
+                                # update spectrum
+                                self._map.set_spectrum(spectrum, pixel=[ix, iy], emit=False)
 
                             # process events
                             self._app.processEvents()
@@ -355,6 +322,9 @@ class BackgroundWidget(QWidget):
                         # check if process was cancelled
                         if progress_dialog.wasCanceled():
                             break
+
+                # stop live plotting
+                self._app.stop_live_plotting()
 
     def cb_boundary_slider_moved(self):
 

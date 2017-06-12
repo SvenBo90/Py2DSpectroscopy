@@ -382,14 +382,13 @@ class FittingWidget(QWidget):
                 progress_dialog.setCancelButton(progress_dialog_cancel_button)
                 progress_dialog.show()
 
+                # start live plotting
+                self._app.start_live_plotting()
+
                 # start fitting
                 i_px = 0
 
                 for ix in range(int(numpy.ceil(fit_area[0])), 1+int(numpy.floor(fit_area[1]))):
-
-                    # check if process was canceled
-                    if progress_dialog.wasCanceled():
-                        break
 
                     for iy in range(int(numpy.ceil(fit_area[2])), 1+int(numpy.floor(fit_area[3]))):
 
@@ -474,14 +473,14 @@ class FittingWidget(QWidget):
                                         spectrum[self.ui.lower_limit_slider.value():self.ui.upper_limit_slider.value(), 1],
                                         p0=start_parameters, bounds=(fit_lower_boundaries, fit_upper_boundaries))
 
-                                    # check if this is the last cleared fit in this column
-                                    if numpy.sum(numpy.logical_and(
-                                                    lower_threshold <= threshold_data[ix, iy:1+int(numpy.floor(fit_area[3]))],
-                                                    threshold_data[ix, iy] <= upper_threshold)) == 1:
+                                    # check if this is the currently focused pixel
+                                    if ix == self._map.get_focus()[0] and iy == self._map.get_focus()[1]:
+
                                         # save fit
                                         self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
                                                           pixel=[ix, iy], emit=True)
                                     else:
+
                                         # save fit
                                         self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
                                                           pixel=[ix, iy], emit=False)
@@ -504,6 +503,13 @@ class FittingWidget(QWidget):
                             # update progress bar
                             i_px += 1
                             progress_dialog.setValue(i_px)
+
+                    # check if process was canceled
+                    if progress_dialog.wasCanceled():
+                        break
+
+                # stop live plotting
+                self._app.stop_live_plotting()
 
             else:
 
