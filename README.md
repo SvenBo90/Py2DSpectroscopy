@@ -2,6 +2,10 @@
 
 Py2DSpectroscopy is a light weight Python UI code for the analysis of two-dimensional spectroscopy data. It was designed to analyze photoluminescence maps of two-dimensional materials such as MoS_2. 
 
+## Video Tutorial
+
+[![Video Tutorial](http://img.youtube.com/vi/NfRWFomUZM0/0.jpg)](http://www.youtube.com/watch?v=NfRWFomUZM0 "Py2DSpectroscopy Video Tutorial ")
+
 ## Requirements
 
 * Python 3.5
