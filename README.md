@@ -4,6 +4,8 @@ Py2DSpectroscopy is a light weight Python UI code for the analysis of two-dimens
 
 ## Video Tutorial
 
+A video tutorial is available on Youtube.
+
 [![Video Tutorial](http://img.youtube.com/vi/NfRWFomUZM0/0.jpg)](http://www.youtube.com/watch?v=NfRWFomUZM0 "Py2DSpectroscopy Video Tutorial ")
 
 ## Requirements
