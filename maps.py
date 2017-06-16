@@ -1,9 +1,14 @@
+# import PyQt5 elements
+from PyQt5.QtWidgets import QApplication
 # general imports
-from PyQt5.QtWidgets import QProgressDialog, QApplication
-from PyQt5.QtCore import Qt
 from os import path
 import numpy
 import pickle
+# datatype imports
+from datatypes.maps1d.qtlab import QtLab1D
+from datatypes.maps2d.qtlab import QtLab2D
+from datatypes.maps2d.horiba import Horiba2D
+from datatypes.maps2d.vuckovic import Vuckovic2D
 
 
 class Map:
@@ -88,6 +93,368 @@ class Map:
             self._app.selected_data_changed.emit(self._id)
 
 
+class Map1D(Map):
+
+    """
+    Map1D
+    Class for one-dimensional maps such as gate-dependent measurements.
+    """
+
+    def __init__(self, map_id, file_name):
+
+        # call super init
+        super(Map1D, self).__init__()
+
+        # set dimension of the map
+        self._dimension = 1
+
+        # set the map id
+        self._id = map_id
+
+        # get the directory from path
+        dir_name = path.dirname(file_name)
+
+        # check for the file type of the map
+        # .dat files are acquired in the PGI9 (FZJ) lab using QTLab
+        if file_name[-4:] == '.dat':
+
+            # define map loader
+            map_loader = QtLab1D(file_name)
+
+        # load data
+        self._map_name, self._spectra, self._data_names, self._data = map_loader.load_data()
+
+        # set map size
+        self._nx = self._spectra.shape[0]
+
+        # set spectral resolution
+        self._resolution = self._spectra.shape[1]
+
+        # set initial interval for the integration of the spectra
+        self._interval = [0, self._resolution-1]
+
+        # check which columns are trivial (==0) TODO:
+        #col_trivial = []
+        #for i_data in range(len(self._data)):
+        #    if numpy.sum(self._data[i_data, :]) == 0:
+        #        col_trivial.append(i_data)
+
+        # delete trivial columns and data names
+        #for i_col in range(len(col_trivial)-1, -1, -1):
+        #    del self._data_names[col_trivial[i_col]]
+        #    self._data = numpy.delete(self._data, col_trivial[i_col], 0)
+
+        # sort data names dictionary again
+        #i_data = 0
+        #data_names_new = {}
+        #for key in self._data_names.keys():
+        #    data_names_new[i_data] = self._data_names[key]
+        #    i_data += 1
+        #self._data_names = data_names_new
+
+        # create variables for the fit data
+        self._fit_functions = numpy.zeros((self._nx, 6))
+        self._fit_initial_parameters = numpy.zeros((self._nx, 6, 4))
+        self._fit_initial_parameters[:, :, :] = numpy.NAN
+        self._fit_optimized_parameters = numpy.zeros((self._nx, 6, 4))
+        self._fit_optimized_parameters[:, :, :] = numpy.NAN
+
+        # set focus to the center of the map
+        self._focus = [int(self._nx / 2)]
+
+    def clear_fit(self, **kwargs):
+
+        # if no pixel was provided the current pixel is updated
+        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+            px = self._focus[0]
+        else:
+            px = kwargs['pixel'][0]
+
+        # clear fit
+        self._fit_functions[px, :] = numpy.zeros(6)
+        self._fit_initial_parameters[px, :, :] = numpy.NAN
+        self._fit_optimized_parameters[px, :, :] = numpy.NAN
+
+        # emit signal
+        if 'emit' not in kwargs or kwargs['emit']:
+            self._app.fit_changed.emit(self._id)
+
+    # TODO: Flip for 1D
+
+    def get_data(self, **kwargs):
+
+        # if no data index is given, return the currently selected data
+        if 'data_index' in kwargs.keys():
+            data_index = kwargs['data_index']
+        else:
+            data_index = self._selected_data
+
+        # return a data
+        if data_index == 0:
+
+            return self._spectra[:, :, 1]
+
+        elif data_index < len(self._data) + 1:
+
+            # check if the whole map data (pixel = -1) or the focussed pixel (pixel = -2)
+            # or a specific pixel (pixel = [x,y]) are requested
+            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                # return whole map data
+                return self._data[data_index-1]
+
+            elif kwargs['pixel'] == -2:
+
+                # return data at focused pixel
+                return self._data[data_index-1][self._focus[0]]
+
+            else:
+
+                # return data at requested pixel
+                return self._data[data_index-1][kwargs['pixel'][0]]
+
+        # return a fit data
+        else:
+
+            # check which fit parameters are there
+            data_index -= len(self._data) + 1
+
+            # get fit functions and fit parameters once
+            fit_functions = self._fit_functions
+            fit_optimized_parameters = self._fit_optimized_parameters
+
+            parameters = []
+            for i_peak in range(6):
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] > 0)) > 0:
+                    parameters.append([i_peak, 0])
+                    parameters.append([i_peak, 1])
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] == 2)) > 0 or \
+                        numpy.sum(numpy.int_(fit_functions[:, i_peak] == 3)) > 0:
+                    parameters.append([i_peak, 2])
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] == 1)) > 0 or \
+                        numpy.sum(numpy.int_(fit_functions[:, i_peak] == 3)) > 0:
+                    parameters.append([i_peak, 3])
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] > 0)) > 0:
+                    parameters.append([i_peak, 4])
+
+            # return intensities
+            if parameters[data_index][1] == 0:
+                return fit_optimized_parameters[:, parameters[data_index][0], 0]
+
+            # return central energies
+            elif parameters[data_index][1] == 1:
+                return fit_optimized_parameters[:, parameters[data_index][0], 1]
+
+            # return sigma
+            elif parameters[data_index][1] == 2:
+                sigma = numpy.zeros((self._nx))
+                sigma[:] = numpy.NAN
+                sigma_from_gaussian = fit_optimized_parameters[:, parameters[data_index][0], 2][fit_functions[:, parameters[data_index][0]] == 2]
+                sigma_from_voigt = fit_optimized_parameters[:, parameters[data_index][0], 2][fit_functions[:, parameters[data_index][0]] == 3]
+                sigma[fit_functions[:, parameters[data_index][0]] == 2] = sigma_from_gaussian
+                sigma[fit_functions[:, parameters[data_index][0]] == 3] = sigma_from_voigt
+                return 1000*sigma
+
+            # return gamma
+            elif parameters[data_index][1] == 3:
+                gamma = numpy.zeros((self._nx))
+                gamma[:] = numpy.NAN
+                gamma_from_lorentzian = fit_optimized_parameters[:, parameters[data_index][0], 2][fit_functions[:, parameters[data_index][0]] == 1]
+                gamma_from_voigt = fit_optimized_parameters[:, parameters[data_index][0], 3][fit_functions[:, parameters[data_index][0]] == 3]
+                gamma[fit_functions[:, parameters[data_index][0]] == 1] = gamma_from_lorentzian
+                gamma[fit_functions[:, parameters[data_index][0]] == 3] = gamma_from_voigt
+                return 1000*gamma
+
+            # return FWHM
+            elif parameters[data_index][1] == 4:
+                fwhm = numpy.zeros((self._nx))
+                fwhm[:] = numpy.NAN
+                sigma_from_gaussian = fit_optimized_parameters[:, parameters[data_index][0], 2][fit_functions[:, parameters[data_index][0]] == 2]
+                gamma_from_lorentzian = fit_optimized_parameters[:, parameters[data_index][0], 2][fit_functions[:, parameters[data_index][0]] == 1]
+                gamma_from_voigt = fit_optimized_parameters[:, parameters[data_index][0], 3][fit_functions[:, parameters[data_index][0]] == 3]
+                sigma_from_voigt = fit_optimized_parameters[:, parameters[data_index][0], 2][fit_functions[:, parameters[data_index][0]] == 3]
+                fwhm[fit_functions[:, parameters[data_index][0]] == 1] = 2*gamma_from_lorentzian
+                fwhm[fit_functions[:, parameters[data_index][0]] == 2] = 2.35482*sigma_from_gaussian
+                fwhm[fit_functions[:, parameters[data_index][0]] == 3] = 0.5346*2.*gamma_from_voigt+numpy.sqrt(0.2166*4.*gamma_from_voigt**2.+2.35482**2.*sigma_from_voigt**2.)
+                return 1000*fwhm
+
+    def get_data_name(self, **kwargs):
+
+        # if no data index is given, return the currently selected data name
+        if 'data_index' in kwargs.keys():
+            data_index = kwargs['data_index']
+        else:
+            data_index = self._selected_data
+
+        # check whether a data or a micrograph or a fit parameter is selected
+        if data_index < len(self._data):
+            # return data name
+            return self._data_names[data_index]
+
+        else:
+
+            # return parameter name
+            data_index = data_index - len(self._data)
+            parameters = []
+            subscripts = [u'\u2081', u'\u2082', u'\u2083', u'\u2084', u'\u2085', u'\u2086']
+            for i_peak in range(6):
+                if numpy.sum(numpy.int_(self._fit_functions[:, i_peak] > 0)) > 0:
+                    parameters.append('I'+subscripts[i_peak])
+                    parameters.append('ε'+subscripts[i_peak])
+                if numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 1)) > 0 or \
+                        numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 3)) > 0:
+                    parameters.append('σ'+subscripts[i_peak])
+                if numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 2)) > 0 or \
+                        numpy.sum(numpy.int_(self._fit_functions[:, i_peak] == 3)) > 0:
+                    parameters.append('γ'+subscripts[i_peak])
+                parameters.append('FWHM'+subscripts[i_peak])
+            return parameters[data_index]
+
+    def get_fit(self, **kwargs):
+
+        # if no pixel was provided the current pixel is returned
+        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+            px = self._focus[0]
+        else:
+            px = kwargs['pixel'][0]
+
+        return self._fit_functions[px, :], self._fit_initial_parameters[px, :, :], self._fit_optimized_parameters[px, :, :]
+
+    def get_fit_functions(self, **kwargs):
+
+        # if no pixel was provided return the whole fit functions array
+        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+            return self._fit_functions[:, :]
+
+        # if pixel is set to -2 return the fit functions for the focused pixel
+        elif kwargs['pixel'] == -2:
+            return self._fit_functions[self._focus[0], :]
+
+        # return the fit functions for the desired pixel
+        else:
+            return self._fit_functions[kwargs['pixel'][0], :]
+
+    def get_fit_parameters(self, **kwargs):
+
+        # if no pixel was provided return the whole fit parameter array
+        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+            return self._fit_optimized_parameters[:, :, :]
+
+        # if pixel is set to -2 return the fit parameters for the focused pixel
+        elif kwargs['pixel'] == -2:
+            return self._fit_optimized_parameters[self._focus[0], :, :]
+
+        # return the fit parameters for the desired pixel
+        else:
+            return self._fit_optimized_parameters[kwargs['pixel'][0], :, :]
+
+    def get_size(self):
+
+        # return map size
+        return [self._nx]
+
+    def get_spectrum(self, **kwargs):
+
+        # if no pixel is given, return the focused pixel's spectrum
+        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+            return self._spectra[self._focus[0]]
+        else:
+            return self._spectra[kwargs['pixel'][0], :, :]
+
+    def set_fit(self, fit_functions, fit_initial_parameters, fit_optimized_parameters, **kwargs):
+
+        # if no pixel was provided the current pixel is updated
+        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+            px = self._focus[0]
+        else:
+            px = kwargs['pixel'][0]
+
+        # clear the old fit data
+        self._fit_functions[px, :] = numpy.zeros(6)
+        self._fit_initial_parameters[px, :, :] = numpy.NAN
+        self._fit_optimized_parameters[px, :, :] = numpy.NAN
+
+        # set new fit data
+        i_parameter = 0
+        for i_peak in range(len(fit_functions)):
+            if fit_functions[i_peak] == 1:
+                self._fit_functions[px, i_peak] = 1
+                self._fit_initial_parameters[px, i_peak, :3] = fit_initial_parameters[i_parameter:i_parameter+3]
+                self._fit_initial_parameters[px, i_peak, 3] = 0
+                self._fit_optimized_parameters[px, i_peak, :3] = fit_optimized_parameters[i_parameter:i_parameter+3]
+                self._fit_optimized_parameters[px, i_peak, 3] = 0
+                i_parameter += 3
+            elif fit_functions[i_peak] == 2:
+                self._fit_functions[px, i_peak] = 2
+                self._fit_initial_parameters[px, i_peak, :3] = fit_initial_parameters[i_parameter:i_parameter+3]
+                self._fit_initial_parameters[px, i_peak, 3] = 0
+                self._fit_optimized_parameters[px, i_peak, :3] = fit_optimized_parameters[i_parameter:i_parameter+3]
+                self._fit_optimized_parameters[px, i_peak, 3] = 0
+                i_parameter += 3
+            elif fit_functions[i_peak] == 3:
+                self._fit_functions[px, i_peak] = 3
+                self._fit_initial_parameters[px, i_peak, :] = fit_initial_parameters[i_parameter:i_parameter+4]
+                self._fit_optimized_parameters[px, i_peak, :] = fit_optimized_parameters[i_parameter:i_parameter+4]
+                i_parameter += 4
+
+        # emit signal
+        if 'emit' not in kwargs or kwargs['emit']:
+            self._app.fit_changed.emit(self._id)
+
+    def set_focus(self, focus):
+
+        # set focus if it is within the map
+        if 0 <= numpy.round(focus[0]) < self._nx:
+                self._focus = [int(numpy.round(focus[0]))]
+
+                # emit signal
+                self._app.focus_changed.emit(self._id)
+
+    def set_interval(self, side, value):
+
+        # check if a good interval has been given
+        if side == 'left' and value < 0:
+            return
+        if side == 'right' and value >= self._resolution:
+            return
+        if side == 'left' and self._interval[1] <= value:
+            return
+        if side == 'right' and self._interval[0] >= value:
+            return
+
+        # set interval
+        if side == 'left':
+            self._interval[0] = value
+        elif side == 'right':
+            self._interval[1] = value
+
+        # recalculate intensities
+        for ix in range(self._nx):
+            spectrum = self._spectra[ix, :, :]
+            self._data[0, ix] = numpy.sum(spectrum[self._interval[0]:self._interval[1], 1])
+
+        # emit signal
+        self._app.interval_changed.emit(self._id)
+
+    def set_spectrum(self, spectrum, **kwargs):
+
+        # if no pixel was provided update the focused pixel
+        if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+            px = self._focus[0]
+        else:
+            px = kwargs['pixel'][0]
+
+        # update spectrum
+        self._spectra[px, :, :] = spectrum
+
+        # update integrated counts
+        self._data[0, px] = numpy.sum(spectrum[:, 1])
+
+        # emit signal
+        if 'emit' not in kwargs or kwargs['emit']:
+            self._app.spectrum_changed.emit(self._id)
+
+
 class Map2D(Map):
 
     """
@@ -113,163 +480,33 @@ class Map2D(Map):
         # .dat files are acquired in the PGI9 (FZJ) lab using QTLab
         if file_name[-4:] == '.dat':
 
-            #  load the data file
-            file_data = numpy.loadtxt(file_name)
-
-            # read the number of pixels and check for consistency
-            self._nx = int(file_data[-1, 1]) + 1
-            self._ny = int(file_data[-1, 2]) + 1
-            if self._nx * self._ny < file_data.shape[0]:
-                self._nx -= 1
-                self._ny = file_data[-1 - self._ny, 2]
-
-            # read the resolution of the CCD from the first spectrum file
-            spectrum = numpy.loadtxt(dir_name + '/spectrum_0_0.asc')
-            self._resolution = len(spectrum)
-
-            # set initial interval for the integration of the spectra
-            self._interval = [0, self._resolution-1]
-
-            # create variables for the data
-            self._spectra = numpy.zeros((self._nx, self._ny, self._resolution, 2))
-            self._data = numpy.zeros((file_data.shape[1] - 2, self._nx, self._ny))
-
-            # read column names and map name
-            self._data_names = {0: 'intensity'}
-            file_lines = open(file_name).readlines()
-            for i_line in range(len(file_lines)):
-                line_split = file_lines[i_line].split()
-                if len(line_split) > 1:
-                    if line_split[1] == 'Filename:':
-                        self._map_name = line_split[2][:-4]
-                    if line_split[1] == 'Column' and int(line_split[2][:-1]) > 3:
-                        next_split = file_lines[i_line + 1].split()
-                        self._data_names[int(line_split[2][:-1]) - 3] = ' '.join(next_split[2:])
-
-            # check if there are .npy files available to accelerate the loading procedure
-            if path.isfile(dir_name + '/spectra.npy') and path.isfile(dir_name + '/energies.npy'):
-
-                # load data from npy files
-                self._spectra[:, :, :, 0] = numpy.load(dir_name + '/energies.npy')
-                self._spectra[:, :, :, 1] = numpy.load(dir_name + '/spectra.npy')
-
-                # integrate counts
-                self._data[0, :, :] = numpy.sum(self._spectra[:, :, :, 1], axis=2)
-
-                # read other quantities
-                for ix in range(self._nx):
-                    for iy in range(self._ny):
-                        self._data[1:, ix, iy] = file_data[ix * self._ny + iy, 3:]
-
-            # if no .npy files are available the spectra need to be loaded from .asc files
-            else:
-
-                # create progressbar dialog
-                progress_dialog = QProgressDialog('', '', 0, self._nx * self._ny,
-                                                  QApplication.instance().windows['mapWindow'])
-                progress_dialog.setWindowTitle('Loading Map')
-                progress_dialog.setWindowModality(Qt.WindowModal)
-                progress_dialog.setCancelButton(None)
-                progress_dialog.show()
-
-                # read data
-                for ix in range(self._nx):
-                    for iy in range(self._ny):
-                        spectrum = numpy.loadtxt(dir_name + '/spectrum_' + str(ix) + '_' + str(iy) + '.asc')
-                        spectrum[:, 0] = 1e-9 * 1239.841842144513 / spectrum[:, 0]
-                        spectrum = numpy.flipud(spectrum)
-                        self._spectra[ix, iy, :, :] = spectrum
-                        self._data[0, ix, iy] = numpy.sum(spectrum[:, 1])
-                        self._data[1:, ix, iy] = file_data[ix * self._ny + iy, 3:]
-                        progress_dialog.setValue(ix * self._ny + iy + 1)
-
-                # save .npy files for the next time the map is loaded
-                numpy.save(dir_name + '/energies.npy', self._spectra[:, :, :, 0])
-                numpy.save(dir_name + '/spectra.npy', self._spectra[:, :, :, 1])
+            # define map loader
+            map_loader = QtLab2D(file_name)
 
         # .txt files are acquired by the Horiba machine in the Heinz Group at Stanford
         elif file_name[-4:] == '.txt':
 
-            # set map name to the file name
-            self._map_name = file_name[len(dir_name)+1:-4]
+            # define map loader
+            map_loader = Horiba2D(file_name)
 
-            # read text file
-            file_data = open(file_name)
-            data_lines = file_data.readlines()
-
-            # convert the data into numpy arrays
-            data_list = []
-            for i_line in range(len(data_lines)):
-                # check if the line is a comment
-                if data_lines[i_line][0] == '#':
-                    continue
-                else:
-                    data_list.append(data_lines[i_line].split('\t'))
-
-            # the first line of the text file includes the energies of the spectra
-            energies = numpy.array(data_list[0][2:], dtype='float64')
-            del data_list[0]
-
-            # set the resolution to the number of pixels of the CCD
-            self._resolution = len(energies)
-
-            # convert the list into a numpy array
-            data_array = numpy.array(data_list, dtype='float64')
-
-            # get map shape
-            x_positions = []
-            y_positions = []
-            for i_px in range(len(data_array)):
-                if data_array[i_px, 0] not in x_positions:
-                    x_positions.append(data_array[i_px, 0])
-                if data_array[i_px, 1] not in y_positions:
-                    y_positions.append(data_array[i_px, 1])
-            self._nx = len(x_positions)
-            self._ny = len(y_positions)
-
-            # create data structures for spectra and position data
-            self._spectra = numpy.zeros((self._nx, self._ny, self._resolution, 2))
-            self._data_names = {0: 'intensity', 1: 'x position', 2: 'y position'}
-            self._data = numpy.zeros((3, self._nx, self._ny))
-
-            # read spectra and position data
-            i_px = 0
-            for ix in range(self._nx):
-                for iy in range(self._ny):
-                    self._spectra[ix, iy, :, 0] = numpy.flipud(energies)
-                    self._spectra[ix, iy, :, 1] = numpy.flipud(data_array[i_px, 2:])
-                    self._data[0, ix, iy] = numpy.sum(self._spectra[ix, iy, :, 1])
-                    self._data[1, ix, iy] = data_array[i_px, 0]
-                    self._data[2, ix, iy] = data_array[i_px, 1]
-                    i_px += 1
-
-        # .dat2 files are acquired in the J. Vuckovic groupd at Stanford
+        # .dat2 files are acquired in the J. Vuckovic group at Stanford
         elif file_name[-5:] == '.dat2':
 
-            # set map name to the file name
-            self._map_name = file_name[len(dir_name)+1:-5]
+            # define map loader
+            map_loader = Vuckovic2D(file_name)
 
-            # read text file
-            file_data = numpy.loadtxt(file_name)
+        # load data
+        self._map_name, self._spectra, self._data_names, self._data = map_loader.load_data()
 
-            # set the resolution to the number of pixels of the CCD
-            self._resolution = 1
+        # set map size
+        self._nx = self._spectra.shape[0]
+        self._ny = self._spectra.shape[1]
 
-            # get map shape
-            self._nx = file_data.shape[0]
-            self._ny = file_data.shape[1]
+        # set spectral resolution
+        self._resolution = self._spectra.shape[2]
 
-            # create data structures for spectra and position data
-            self._spectra = numpy.zeros((self._nx, self._ny, self._resolution, 2))
-            self._data_names = {0: 'intensity'}
-            self._data = numpy.zeros((1, self._nx, self._ny))
-
-            # read intensities
-            for ix in range(self._nx):
-                for iy in range(self._ny):
-                        self._spectra[ix, iy, :, 0] = 0
-                        self._spectra[ix, iy, :, 1] = file_data[ix, iy]
-                        self._data[0, ix, iy] = file_data[ix, iy]
+        # set initial interval for the integration of the spectra
+        self._interval = [0, self._resolution-1]
 
         # check which columns are trivial (==0)
         col_trivial = []
@@ -786,6 +1023,33 @@ class MapList:
 
         # call super init
         super(MapList, self).__init__()
+
+    def append_1d(self, file_name):
+
+        # check if the loaded file is a .py2dl file
+        if file_name[-6:] == '.py2ds':
+
+            # pickle map object from .py2dl file
+            map_file = open(file_name, 'rb')
+            self._maps[self._id_counter] = pickle.load(map_file)
+            self._maps[self._id_counter].set_id(self._id_counter)
+            self._maps[self._id_counter].set_app(self._app)
+
+        else:
+
+            # create a new map object and select this map
+            self._maps[self._id_counter] = Map1D(self._id_counter, file_name)
+            self._maps[self._id_counter].set_app(self._app)
+
+        # increase the map and id counter
+        self._counter += 1
+        self._id_counter += 1
+
+        # emit signal
+        self._app.map_added.emit(self._id_counter - 1)
+
+        # return map object
+        return self._maps[self._id_counter - 1]
 
     def append_2d(self, file_name):
 

@@ -154,7 +154,148 @@ class BackgroundWidget(QWidget):
             # check the dimension of the map
             if self._map.get_dimension() == 1:
 
-                return
+                # get map size
+                nx = self._map.get_size()[0]
+
+                # create progressbar dialog
+                progress_dialog = QProgressDialog('', '', 0, nx, self._app.windows['backgroundWindow'])
+                progress_dialog.setWindowTitle('Removing Background')
+                progress_dialog.setWindowModality(Qt.WindowModal)
+                progress_dialog_cancel_button = QPushButton('Stop')
+                progress_dialog.setCancelButton(progress_dialog_cancel_button)
+                progress_dialog.show()
+
+                # start live plotting
+                self._app.start_live_plotting()
+
+                # remove background on each pixel
+                if self.ui.minimum_counts_radio_button.isChecked():
+
+                    for ix in range(nx):
+
+                        # check if process was cancelled
+                        if progress_dialog.wasCanceled():
+                            break
+
+                        # load spectrum
+                        spectrum = self._map.get_spectrum(pixel=[ix])
+
+                        # remove minimum as a background
+                        spectrum[:, 1] = spectrum[:, 1]-numpy.min(spectrum[:, 1])
+
+                        if ix == self._map.get_focus()[0]:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=True)
+
+                        else:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=False)
+
+                        # process events
+                        self._app.processEvents()
+
+                        # update progress bar
+                        progress_dialog.setValue(ix + 1)
+
+                elif self.ui.interval_average_radio_button.isChecked():
+
+                    for ix in range(nx):
+
+                        # check if process was cancelled
+                        if progress_dialog.wasCanceled():
+                            break
+
+                        # load spectrum
+                        spectrum = self._map.get_spectrum(pixel=[ix])
+
+                        # remove interval average as a background
+                        spectrum[:, 1] = spectrum[:, 1]-numpy.mean(
+                            spectrum[self.ui.lower_boundary_slider.value():self.ui.upper_boundary_slider.value(), 1])
+
+                        if ix == self._map.get_focus()[0]:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=True)
+
+                        else:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=False)
+
+                        # process events
+                        self._app.processEvents()
+
+                        # update progress bar
+                        progress_dialog.setValue(ix + 1)
+
+                elif self.ui.background_from_pixel_radio_button.isChecked():
+
+                    background = numpy.copy(self._map.get_spectrum(pixel=[self.ui.x_spin_box.value()])[:, 1])
+
+                    for ix in range(nx):
+
+                        # check if process was cancelled
+                        if progress_dialog.wasCanceled():
+                            break
+
+                        # load spectrum
+                        spectrum = self._map.get_spectrum(pixel=[ix])
+
+                        # remove spectrum at specific pixel as a background
+                        spectrum[:, 1] = spectrum[:, 1] - background
+
+                        if ix == self._map.get_focus()[0]:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=True)
+
+                        else:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=False)
+
+                        # process events
+                        self._app.processEvents()
+
+                        # update progress bar
+                        progress_dialog.setValue(ix + 1)
+
+                elif self.ui.background_from_file_radio_button.isChecked():
+
+                    background = numpy.loadtxt(self.ui.file_path_line_edit.text())
+
+                    for ix in range(nx):
+
+                        # check if process was cancelled
+                        if progress_dialog.wasCanceled():
+                            break
+
+                        # load spectrum
+                        spectrum = self._map.get_spectrum(pixel=[ix])
+
+                        # remove spectrum from file as a background
+                        spectrum[:, 1] = spectrum[:, 1]-background[:, 1]
+
+                        if ix == self._map.get_focus()[0]:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=True)
+
+                        else:
+
+                            # update spectrum
+                            self._map.set_spectrum(spectrum, pixel=[ix], emit=False)
+
+                        # process events
+                        self._app.processEvents()
+
+                        # update progress bar
+                        progress_dialog.setValue(ix + 1)
+
+                # stop live plotting
+                self._app.stop_live_plotting()
 
             elif self._map.get_dimension() == 2:
 

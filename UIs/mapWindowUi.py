@@ -44,7 +44,7 @@ class UiMapWindow(object):
         self.action_1d_map = QAction(map_window)
         self.action_1d_map.setObjectName("action_1d_map")
         self.action_1d_map.setText("1D Map")
-        self.action_1d_map.setEnabled(False)
+        self.action_1d_map.setEnabled(True)
         self.open_menu.addAction(self.action_1d_map)
 
         # 2d action

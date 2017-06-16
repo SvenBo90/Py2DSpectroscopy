@@ -55,10 +55,10 @@ class FittingWidget(QWidget):
             self.ui.area_slider_y2.setValue(map_size[1]-1)
         else:
             self.ui.area_slider_x1.setMinimum(0)
-            self.ui.area_slider_x1.setMaximum(map_size-1)
+            self.ui.area_slider_x1.setMaximum(map_size[0]-1)
             self.ui.area_slider_x2.setMinimum(0)
-            self.ui.area_slider_x2.setMaximum(map_size-1)
-            self.ui.area_slider_x2.setValue(map_size-1)
+            self.ui.area_slider_x2.setMaximum(map_size[0]-1)
+            self.ui.area_slider_x2.setValue(map_size[0]-1)
 
         # set maximum value for the limit selections
         map_resolution = self._map.get_resolution()
@@ -135,7 +135,8 @@ class FittingWidget(QWidget):
                 self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value(),
                 self.ui.area_slider_y1.value(), self.ui.area_slider_y2.value())
         else:
-            return
+            self._app.windows['mapWindow'].ui.tab_widget.currentWidget().update_area_map(
+                self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value())
 
     def cb_area_slider_pressed(self):
 
@@ -145,7 +146,8 @@ class FittingWidget(QWidget):
                 self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value(),
                 self.ui.area_slider_y1.value(), self.ui.area_slider_y2.value())
         else:
-            return
+            self._app.windows['mapWindow'].ui.tab_widget.currentWidget().create_area_map(
+                self.ui.area_slider_x1.value(), self.ui.area_slider_x2.value())
 
     def cb_area_slider_released(self):
 
@@ -513,7 +515,149 @@ class FittingWidget(QWidget):
 
             else:
 
-                return
+                # get the area to fit
+                if self.ui.area_slider_x2.value() < self.ui.area_slider_x1.value():
+                    x2 = self.ui.area_slider_x1.value()
+                    x1 = self.ui.area_slider_x2.value()
+                else:
+                    x1 = self.ui.area_slider_x1.value()
+                    x2 = self.ui.area_slider_x2.value()
+                fit_area = [x1, x2]
+
+                # threshold settings
+                threshold_data = self._map.get_data(data_index=1+self.ui.threshold_type_combo.currentIndex())
+                min_data = numpy.min(threshold_data)
+                max_data = numpy.max(threshold_data)
+                lower_threshold = min_data+1./10000.*self.ui.lower_threshold_slider.value()*(max_data-min_data)
+                upper_threshold = min_data+1./10000.*self.ui.upper_threshold_slider.value()*(max_data-min_data)
+
+                # get existing fit functions in order to check for already fitted pixels
+                existing_fit_functions = self._map.get_fit_functions()
+
+                # number of pixels to fit
+                n_pixels = numpy.count_nonzero(numpy.logical_and(
+                        lower_threshold <= threshold_data[int(numpy.ceil(fit_area[0])):1+int(numpy.floor(fit_area[1]))],
+                        upper_threshold >= threshold_data[int(numpy.ceil(fit_area[0])):1+int(numpy.floor(fit_area[1]))]))
+
+                # create progressbar dialog
+                progress_dialog = QProgressDialog('', '', 0, n_pixels, self._app.windows['fittingWindow'])
+                progress_dialog.setWindowTitle('Fitting')
+                progress_dialog.setWindowModality(Qt.WindowModal)
+                progress_dialog_cancel_button = QPushButton('Stop')
+                progress_dialog.setCancelButton(progress_dialog_cancel_button)
+                progress_dialog.show()
+
+                # start live plotting
+                self._app.start_live_plotting()
+
+                # start fitting
+                i_px = 0
+
+                for ix in range(int(numpy.ceil(fit_area[0])), 1+int(numpy.floor(fit_area[1]))):
+
+                    # check if process was canceled
+                    if progress_dialog.wasCanceled():
+                        break
+
+                    # check if pixel is within threshold area
+                    if lower_threshold <= threshold_data[ix] <= upper_threshold:
+
+                        # check if pixel is already fitted
+                        if self.ui.overwrite_check_box.isChecked() or \
+                                        numpy.sum(existing_fit_functions[ix, :]) == 0:
+
+                            # load spectrum
+                            spectrum = self._map.get_spectrum(pixel=[ix])
+
+                            # get parameters from neighbours
+                            if self.ui.neighbour_check_box.isChecked():
+
+                                # define order in which to look for neighbours
+                                neighbours = [[ix-1], [ix+1]]
+
+                                # counter for suitable neighbours
+                                n_neighbours = 0
+
+                                # averaged neighbour parameters
+                                parameters_neighbours = numpy.zeros(n_parameters)
+
+                                # iterate neighbour orders: check first closest neighbours, then second closest neighbours ..
+                                for i_neighbour in range(len(neighbours)):
+
+                                    # check if potential neighbour is on map
+                                    if neighbours[i_neighbour][0] < 0 or neighbours[i_neighbour][0] >= self._map.get_size()[0]:
+                                        break
+
+                                    # get fit functions from neighbour
+                                    fit_functions_neighbour = self._map.get_fit_functions(pixel=neighbours[i_neighbour])
+
+                                    # check if fit functions are the same as the current ones
+                                    if (fit_functions == fit_functions_neighbour).all():
+
+                                        # get parameters at neighbour pixel
+                                        parameters_neighbour = self._map.get_fit_parameters(pixel=neighbours[i_neighbour])
+                                        j_parameter = 0
+                                        for neighbour_peak in range(6):
+                                            if 1 <= fit_functions_neighbour[neighbour_peak] <= 2:
+                                                parameters_neighbours[j_parameter:j_parameter+3] += parameters_neighbour[neighbour_peak, 0:3]
+                                                j_parameter += 3
+                                            elif fit_functions_neighbour[neighbour_peak] == 3:
+                                                parameters_neighbours[j_parameter:j_parameter+4] += parameters_neighbour[neighbour_peak, 0:4]
+                                                j_parameter += 4
+                                        n_neighbours += 1
+
+                                # if a neighbour was found, take the neighbour parameters, otherwise initial parameters
+                                if n_neighbours > 0:
+                                    parameters_neighbours /= n_neighbours
+                                    start_parameters = parameters_neighbours
+                                else:
+                                    start_parameters = fit_initial_parameters
+
+                            # if neighbour function is not checked
+                            else:
+                                start_parameters = fit_initial_parameters
+
+                            # perform fit
+                            try:
+                                fit_optimized_parameters, covariance = curve_fit(
+                                    fit_function,
+                                    spectrum[self.ui.lower_limit_slider.value():self.ui.upper_limit_slider.value(), 0],
+                                    spectrum[self.ui.lower_limit_slider.value():self.ui.upper_limit_slider.value(), 1],
+                                    p0=start_parameters, bounds=(fit_lower_boundaries, fit_upper_boundaries))
+
+                                # check if this is the currently focused pixel
+                                if ix == self._map.get_focus()[0]:
+
+                                    # save fit
+                                    self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
+                                                      pixel=[ix], emit=True)
+                                else:
+
+                                    # save fit
+                                    self._map.set_fit(fit_functions, start_parameters, fit_optimized_parameters,
+                                                      pixel=[ix], emit=False)
+
+                            except RuntimeError:
+                                message_box = QMessageBox(self._app.windows['fittingWindow'])
+                                message_box.setIcon(QMessageBox.Information)
+                                message_box.setWindowTitle('Fitting failed!')
+                                message_box.setText('Fitting failed for pixel ('+str(ix)+')')
+                                message_box.addButton('Continue Fitting', QMessageBox.AcceptRole)
+                                message_box.addButton('Stop Fitting', QMessageBox.AcceptRole)
+                                message_box.exec_()
+                                if message_box.result() == 1:
+                                    progress_dialog.close()
+                                    return
+
+                        # process events
+                        self._app.processEvents()
+
+                        # update progress bar
+                        i_px += 1
+                        progress_dialog.setValue(i_px)
+
+                # stop live plotting
+                self._app.stop_live_plotting()
         
     def cb_function_selected(self, index):
 

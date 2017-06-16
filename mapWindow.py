@@ -79,7 +79,7 @@ class MapTab(QWidget):
 
             # set focus of the map
             if self._map.get_dimension() == 1:
-                self._map.set_focus(int(numpy.round(event.ydata)))
+                self._map.set_focus([int(numpy.round(event.ydata))])
             elif self._map.get_dimension() == 2:
                 self._map.set_focus([int(numpy.round(event.xdata)), int(numpy.round(event.ydata))])
 
@@ -100,9 +100,9 @@ class MapTab(QWidget):
                 focus[0] += 1
         elif self._map.get_dimension() == 1:
             if event.key == 'down':
-                focus -= 1
+                focus[0] -= 1
             elif event.key == 'up':
-                focus += 1
+                focus[0] += 1
 
         # set new focus
         self._map.set_focus(focus)
@@ -198,12 +198,14 @@ class MapTab(QWidget):
                     self.ui.data_selection_combo_box.addItems(['FWHM'+subscripts[i_peak]])
         else:
             for i_peak in range(6):
-                if numpy.sum(numpy.int_(fit_functions[:, i_peak] == 3)) > 0:
-                    self.ui.data_selection_combo_box.addItems(['I'+str(i_peak), 'λ'+str(i_peak),
-                                                               'σ'+str(i_peak), 'γ'+str(i_peak)])
-                elif numpy.sum(numpy.int_(fit_functions[:, i_peak] == 1)) > 0 or \
-                        numpy.sum(numpy.int_(fit_functions[:, i_peak] == 2)) > 0:
-                    self.ui.data_selection_combo_box.addItems(['I'+str(i_peak), 'λ'+str(i_peak), 'σ'+str(i_peak)])
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] > 0)) > 0:
+                    self.ui.data_selection_combo_box.addItems(['I'+subscripts[i_peak], 'ε'+subscripts[i_peak]])
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] == 1)) > 0 or numpy.sum(numpy.int_(fit_functions[:, i_peak] == 3)) > 0:
+                    self.ui.data_selection_combo_box.addItems(['σ'+subscripts[i_peak]])
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] == 2)) > 0 or numpy.sum(numpy.int_(fit_functions[:, i_peak] == 3)) > 0:
+                    self.ui.data_selection_combo_box.addItems(['γ'+subscripts[i_peak]])
+                if numpy.sum(numpy.int_(fit_functions[:, i_peak] > 0)) > 0:
+                    self.ui.data_selection_combo_box.addItems(['FWHM'+subscripts[i_peak]])
 
         # if the selected index is still available select it
         if current_index <= self.ui.data_selection_combo_box.count():
@@ -377,9 +379,12 @@ class MapWindow(QMainWindow):
             if file_name == '':
 
                 return
-
-            numpy.savetxt(file_name,
-                          self._app.maps.get_selected_map().get_data(data_index=export_dialog.get_data_selection()))
+            if self._app.maps.get_selected_map().get_dimension() == 2:
+                numpy.savetxt(file_name,
+                              self._app.maps.get_selected_map().get_data(data_index=export_dialog.get_data_selection()))
+            else:
+                numpy.savetxt(file_name,
+                              self._app.maps.get_selected_map().get_data(data_index=1+export_dialog.get_data_selection()))
 
     def cb_action_fitting(self):
 
@@ -397,17 +402,21 @@ class MapWindow(QMainWindow):
         file_name = QFileDialog.getOpenFileName(self._app.windows['mapWindow'], 'Open File', '', '')
         file_name = file_name[0]
 
+        # check if file has been selected
+        if file_name == '':
+            return
+
         # add map
         map_handle = self._app.maps.append_1d(file_name)
 
         # create new tab for map
-        map_tab = MapTab(map_handle)
-        map_tab.update()
-        self.ui.tab_widget.addTab(map_tab, map_handle.get_map_name())
-        self.ui.tab_widget.setCurrentWidget(map_tab)
+        self._map_tab_widgets[map_handle.get_id()] = MapTab(map_handle)
+        self._map_tab_widgets[map_handle.get_id()].update()
+        self.ui.tab_widget.addTab(self._map_tab_widgets[map_handle.get_id()], map_handle.get_map_name())
+        self.ui.tab_widget.setCurrentWidget(self._map_tab_widgets[map_handle.get_id()])
 
         # update menus
-        self.update_menus()
+        #self.update_menus()
 
     def cb_action2d_map(self):
 
@@ -454,23 +463,7 @@ class MapWindow(QMainWindow):
 
         if map_handle.get_dimension() == 1:
 
-            # get map size
-            nx = map_handle.get_size()[0]
-
-            # create progressbar dialog
-            progress_dialog = QProgressDialog('', '', 0, nx, self)
-            progress_dialog.setWindowTitle('Removing Cosmic Rays')
-            progress_dialog.setWindowModality(Qt.WindowModal)
-            progress_dialog.setCancelButton(None)
-            progress_dialog.show()
-
-            for ix in range(nx):
-
-                # spectrum = map_handle.get_spectrum(pixel=ix)
-
-                # TODO: think of a good algorithm for cosmic removal for maps with varying parameters, e.g. power
-
-                progress_dialog.setValue(ix + 1)
+            return
 
         else:
 
@@ -618,10 +611,7 @@ class MapWindow(QMainWindow):
         if self._app.maps.get_count() > 0:
 
             self.ui.action_save.setEnabled(True)
-            if self._app.maps.get_selected_map().get_dimension() == 2:
-                self.ui.action_export.setEnabled(True)
-            else:
-                self.ui.action_export.setEnabled(False)
+            self.ui.action_export.setEnabled(True)
             if self._app.maps.get_selected_map().get_dimension() == 2:
                 self.ui.action_add_micrograph.setEnabled(True)
             else:
@@ -630,15 +620,24 @@ class MapWindow(QMainWindow):
             self.ui.action_spectrum.setEnabled(True)
             self.ui.action_pixel_information.setEnabled(True)
             self.ui.action_remove_background.setEnabled(True)
-            self.ui.action_remove_cosmic_rays.setEnabled(True)
             if self._app.maps.get_selected_map().get_dimension() == 2:
+                self.ui.action_remove_cosmic_rays.setEnabled(True)
+            else:
+                self.ui.action_remove_cosmic_rays.setEnabled(False)
+            if self._app.maps.get_selected_map().get_dimension() == 2:
+                self.ui.flip_menu.setEnabled(True)
+                self.ui.rotate_menu.setEnabled(True)
                 self.ui.action_horizontally.setEnabled(True)
                 self.ui.action_vertically.setEnabled(True)
                 self.ui.action_clockwise.setEnabled(True)
                 self.ui.action_anticlockwise.setEnabled(True)
             else:
+                self.ui.flip_menu.setEnabled(False)
+                self.ui.rotate_menu.setEnabled(False)
                 self.ui.action_clockwise.setEnabled(False)
                 self.ui.action_anticlockwise.setEnabled(False)
+                self.ui.action_horizontally.setEnabled(False)
+                self.ui.action_vertically.setEnabled(False)
 
         else:
 

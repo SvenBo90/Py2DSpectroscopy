@@ -68,7 +68,7 @@ class MapCanvas1D(PlotCanvas):
         self._map = map_handle
 
         # set extent
-        self._extent = [self._map.get_resolution(), self._map.get_size()]
+        self._extent = [self._map.get_resolution(), self._map.get_size()[0]]
 
         # create figure
         app_dpi_x = float(QApplication.desktop().physicalDpiX())
@@ -87,7 +87,7 @@ class MapCanvas1D(PlotCanvas):
 
         # create plots
         self._map_plot_1d, = self._axes.plot([0], [0], color='black')
-        self._map_plot_2d = self._axes.imshow(numpy.transpose(self._map.get_data()), animated=True, aspect='auto',
+        self._map_plot_2d = self._axes.imshow(self._map.get_data(), animated=True, aspect='auto',
                                               interpolation='none', origin='lower', cmap='nipy_spectral')
 
         # create crosshair
@@ -156,7 +156,7 @@ class MapCanvas1D(PlotCanvas):
 
         # create threshold map
         self._threshold_map = self._axes.contourf(numpy.transpose([threshold_data, threshold_data]),
-                                                  [threshold, numpy.max(threshold_data)], origin='lower',
+                                                  [threshold[0], threshold[1]], origin='lower',
                                                   alpha=0.5,
                                                   extent=[-100000000, 100000000, -0.5, self._extent[1] - 0.5])
 
@@ -171,7 +171,7 @@ class MapCanvas1D(PlotCanvas):
 
         # create new threshold map
         self._threshold_map = self._axes.contourf(numpy.transpose([threshold_data, threshold_data]),
-                                                  [threshold, numpy.max(threshold_data)], origin='lower',
+                                                  [threshold[0], threshold[1]], origin='lower',
                                                   alpha=0.5,
                                                   extent=[-100000000, 100000000, -0.5, self._extent[1] - 0.5])
 
@@ -213,7 +213,7 @@ class MapCanvas1D(PlotCanvas):
         if len(data.shape) == 2:
 
             # plot new 2d data
-            self._map_plot_2d.set_data(numpy.transpose(data))
+            self._map_plot_2d.set_data(data)
 
             # set extent and axes limits
             self._map_plot_2d.set_extent([-0.5, self._extent[0] - 0.5, -0.5, self._extent[1] - 0.5])
