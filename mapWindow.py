@@ -50,15 +50,19 @@ class MapTab(QWidget):
         self._map_canvas.add_toolbar(self.ui.toolbar_widget)
 
         # fill data selection widget
+        self.ui.data_selection_combo_box.addItems(['spectra', '-- integral', '-- mean', '-- maximum'])
+        if self._map.get_dimension() == 2:
+            self.ui.data_selection_combo_box.model().item(0).setEnabled(False)
         for key, value in self._map.get_data_names().items():
             self.ui.data_selection_combo_box.addItems([value])
+        self.ui.data_selection_combo_box.setCurrentIndex(self._map.get_dimension() - 1)
         self.ui.data_selection_combo_box.currentIndexChanged.connect(self.cb_data_selection_changed)
 
     def cb_data_selection_changed(self, index):
 
         # I don't know why this is needed actually
         if index == -1:
-            index = 0
+            index = self._map.get_dimension() - 1
 
         # change the selected data and update the map canvas
         self._map.set_selected_data(index)
@@ -168,11 +172,21 @@ class MapTab(QWidget):
 
     def update_data_selection_combo_box(self):
 
+        # unconnect
+        self.ui.data_selection_combo_box.currentIndexChanged.disconnect()
+
         # save the currently selected index
         current_index = self.ui.data_selection_combo_box.currentIndex()
 
         # clear the data selection box
         self.ui.data_selection_combo_box.clear()
+
+        # add data items for the spectra
+        self.ui.data_selection_combo_box.addItems(['spectra', '-- integral', '-- mean', '-- maximum'])
+
+        # disable spectra item for 2d maps
+        if self._map.get_dimension() == 2:
+            self.ui.data_selection_combo_box.model().item(0).setEnabled(False)
 
         # add data to the selection box
         for key, value in self._map.get_data_names().items():
@@ -207,6 +221,9 @@ class MapTab(QWidget):
                 if numpy.sum(numpy.int_(fit_functions[:, i_peak] > 0)) > 0:
                     self.ui.data_selection_combo_box.addItems(['FWHM'+subscripts[i_peak]])
 
+        # reconnect
+        self.ui.data_selection_combo_box.currentIndexChanged.connect(self.cb_data_selection_changed)
+
         # if the selected index is still available select it
         if current_index <= self.ui.data_selection_combo_box.count():
 
@@ -214,10 +231,10 @@ class MapTab(QWidget):
 
         else:
 
-            self.ui.data_selection_combo_box.setCurrentIndex(0)
+            self.ui.data_selection_combo_box.setCurrentIndex(self._map.get_dimension() - 1)
 
     def update_threshold_map(self, threshold_data, threshold):
-
+        print(threshold)
         # update threshold map on the map canvas
         self._map_canvas.update_threshold_map(threshold_data, threshold)
 
@@ -433,7 +450,8 @@ class MapWindow(QMainWindow):
 
         # create new tab for map
         self._map_tab_widgets[map_handle.get_id()] = MapTab(map_handle)
-        self._map_tab_widgets[map_handle.get_id()].update()
+        self._map_tab_widgets[map_handle.get_id()].update_data()
+        self._map_tab_widgets[map_handle.get_id()].update_crosshair()
         self.ui.tab_widget.addTab(self._map_tab_widgets[map_handle.get_id()], map_handle.get_map_name())
         self.ui.tab_widget.setCurrentWidget(self._map_tab_widgets[map_handle.get_id()])
 

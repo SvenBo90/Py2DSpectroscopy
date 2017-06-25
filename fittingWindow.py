@@ -36,9 +36,11 @@ class FittingWidget(QWidget):
         self.ui = UiFittingWidget(self)
 
         # fill threshold combo box
+        self.ui.threshold_type_combo.addItems(['spectra', '-- integral', '-- mean', '-- maximum'])
+        self.ui.threshold_type_combo.model().item(0).setEnabled(False)
+        self.ui.threshold_type_combo.setCurrentIndex(1)
         for key, value in self._map.get_data_names().items():
-            if self._map.get_dimension() == 2 or key > 0:
-                self.ui.threshold_type_combo.addItems([value])
+            self.ui.threshold_type_combo.addItems([value])
 
         # set area slider limits
         map_size = self._map.get_size()
@@ -749,14 +751,12 @@ class FittingWidget(QWidget):
     def cb_threshold_slider_moved(self):
 
         # get threshold data and calculate threshold value
-        if self._map.get_dimension() == 2:
-            data = self._map.get_data(data_index=self.ui.threshold_type_combo.currentIndex())
-        else:
-            data = self._map.get_data(data_index=1+self.ui.threshold_type_combo.currentIndex())
+        data = self._map.get_data(data_index=self.ui.threshold_type_combo.currentIndex())
         min_data = numpy.min(data)
         max_data = numpy.max(data)
         lower_threshold = min_data+1./10000.*self.ui.lower_threshold_slider.value()*(max_data-min_data)
         upper_threshold = min_data+1./10000.*self.ui.upper_threshold_slider.value()*(max_data-min_data)
+
         # update threshold map on map canvas
         self._app.windows['mapWindow'].ui.tab_widget.currentWidget().update_threshold_map(
             data, [lower_threshold, upper_threshold])
@@ -770,10 +770,7 @@ class FittingWidget(QWidget):
     def cb_threshold_slider_pressed(self):
 
         # get threshold data and calculate threshold value
-        if self._map.get_dimension() == 2:
-            data = self._map.get_data(data_index=self.ui.threshold_type_combo.currentIndex())
-        else:
-            data = self._map.get_data(data_index=1+self.ui.threshold_type_combo.currentIndex())
+        data = self._map.get_data(data_index=self.ui.threshold_type_combo.currentIndex())
         min_data = numpy.min(data)
         max_data = numpy.max(data)
         lower_threshold = min_data+1./10000.*self.ui.lower_threshold_slider.value()*(max_data-min_data)

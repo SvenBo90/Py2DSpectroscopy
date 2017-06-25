@@ -33,10 +33,10 @@ class QtLab2D:
 
         # create variables for the data
         spectra = numpy.zeros((nx, ny, resolution, 2))
-        data = numpy.zeros((file_data.shape[1] - 2, nx, ny))
+        data = numpy.zeros((file_data.shape[1] - 3, nx, ny))
 
         # read column names and map name
-        data_names = {0: 'intensity'}
+        data_names = {}
         file_lines = open(self._file_name).readlines()
         for i_line in range(len(file_lines)):
             line_split = file_lines[i_line].split()
@@ -45,7 +45,7 @@ class QtLab2D:
                     map_name = line_split[2][:-4]
                 if line_split[1] == 'Column' and int(line_split[2][:-1]) > 3:
                     next_split = file_lines[i_line + 1].split()
-                    data_names[int(line_split[2][:-1]) - 3] = ' '.join(next_split[2:])
+                    data_names[int(line_split[2][:-1]) - 4] = ' '.join(next_split[2:])
 
         # check if there are .npy files available to accelerate the loading procedure
         if path.isfile(dir_name + '/spectra.npy') and path.isfile(dir_name + '/energies.npy'):
@@ -54,13 +54,10 @@ class QtLab2D:
             spectra[:, :, :, 0] = numpy.load(dir_name + '/energies.npy')
             spectra[:, :, :, 1] = numpy.load(dir_name + '/spectra.npy')
 
-            # integrate counts
-            data[0, :, :] = numpy.sum(spectra[:, :, :, 1], axis=2)
-
             # read other quantities
             for ix in range(nx):
                 for iy in range(ny):
-                    data[1:, ix, iy] = file_data[ix * ny + iy, 3:]
+                    data[:, ix, iy] = file_data[ix * ny + iy, 3:]
 
         # if no .npy files are available the spectra need to be loaded from .asc files
         else:
@@ -80,8 +77,7 @@ class QtLab2D:
                     spectrum[:, 0] = 1e-9 * 1239.841842144513 / spectrum[:, 0]
                     spectrum = numpy.flipud(spectrum)
                     spectra[ix, iy, :, :] = spectrum
-                    data[0, ix, iy] = numpy.sum(spectrum[:, 1])
-                    data[1:, ix, iy] = file_data[ix * ny + iy, 3:]
+                    data[:, ix, iy] = file_data[ix * ny + iy, 3:]
                     progress_dialog.setValue(ix * ny + iy + 1)
 
             # save .npy files for the next time the map is loaded

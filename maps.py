@@ -10,6 +10,7 @@ from datatypes.maps2d.qtlab import QtLab2D
 from datatypes.maps2d.horiba import Horiba2D
 from datatypes.maps2d.vuckovic import Vuckovic2D
 
+import time
 
 class Map:
 
@@ -133,24 +134,13 @@ class Map1D(Map):
         # set initial interval for the integration of the spectra
         self._interval = [0, self._resolution-1]
 
-        # check which columns are trivial (==0) TODO:
-        #col_trivial = []
-        #for i_data in range(len(self._data)):
-        #    if numpy.sum(self._data[i_data, :]) == 0:
-        #        col_trivial.append(i_data)
-
-        # delete trivial columns and data names
-        #for i_col in range(len(col_trivial)-1, -1, -1):
-        #    del self._data_names[col_trivial[i_col]]
-        #    self._data = numpy.delete(self._data, col_trivial[i_col], 0)
-
-        # sort data names dictionary again
-        #i_data = 0
-        #data_names_new = {}
-        #for key in self._data_names.keys():
-        #    data_names_new[i_data] = self._data_names[key]
-        #    i_data += 1
-        #self._data_names = data_names_new
+        # get integrated counts, average energy and maximum energy
+        self._int_counts = numpy.sum(self._spectra[:, :, 1], axis=1)
+        self._mean_energies = numpy.sum(self._spectra[:, :, 0]*self._spectra[:, :, 1], axis=1)/self._int_counts
+        max_pixels = numpy.argmax(self._spectra[:, :, 1], axis=1)
+        self._max_energies = numpy.zeros((self._nx))
+        for ix in range(self._nx):
+            self._max_energies[ix] = self._spectra[ix, max_pixels[ix], 0]
 
         # create variables for the fit data
         self._fit_functions = numpy.zeros((self._nx, 6))
@@ -194,30 +184,90 @@ class Map1D(Map):
 
             return self._spectra[:, :, 1]
 
-        elif data_index < len(self._data) + 1:
+        elif data_index == 1:
 
             # check if the whole map data (pixel = -1) or the focussed pixel (pixel = -2)
             # or a specific pixel (pixel = [x,y]) are requested
             if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
 
                 # return whole map data
-                return self._data[data_index-1]
+                return self._int_counts
 
             elif kwargs['pixel'] == -2:
 
                 # return data at focused pixel
-                return self._data[data_index-1][self._focus[0]]
+                return self._int_counts[self._focus[0]]
 
             else:
 
                 # return data at requested pixel
-                return self._data[data_index-1][kwargs['pixel'][0]]
+                return self._int_counts[kwargs['pixel'][0]]
+
+
+        elif data_index == 2:
+
+            # check if the whole map data (pixel = -1) or the focussed pixel (pixel = -2)
+            # or a specific pixel (pixel = [x,y]) are requested
+            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                # return whole map data
+                return self._mean_energies
+
+            elif kwargs['pixel'] == -2:
+
+                # return data at focused pixel
+                return self._mean_energies[self._focus[0]]
+
+            else:
+
+                # return data at requested pixel
+                return self._mean_energies[kwargs['pixel'][0]]
+
+        elif data_index == 3:
+
+            # check if the whole map data (pixel = -1) or the focussed pixel (pixel = -2)
+            # or a specific pixel (pixel = [x,y]) are requested
+            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                # return whole map data
+                return self._max_energies
+
+            elif kwargs['pixel'] == -2:
+
+                # return data at focused pixel
+                return self._max_energies[self._focus[0]]
+
+            else:
+
+                # return data at requested pixel
+                return self._max_energies[kwargs['pixel'][0]]
+
+        elif 3 < data_index < 4 + len(self._data):
+
+            data_index -= 4
+
+            # check if the whole map data (pixel = -1) or the focussed pixel (pixel = -2)
+            # or a specific pixel (pixel = [x,y]) are requested
+            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                # return whole map data
+                return self._data[data_index]
+
+            elif kwargs['pixel'] == -2:
+
+                # return data at focused pixel
+                return self._data[data_index][self._focus[0]]
+
+            else:
+
+                # return data at requested pixel
+                return self._data[data_index][kwargs['pixel'][0]]
 
         # return a fit data
         else:
 
             # check which fit parameters are there
-            data_index -= len(self._data) + 1
+            data_index -= 4 + len(self._data)
 
             # get fit functions and fit parameters once
             fit_functions = self._fit_functions
@@ -287,14 +337,33 @@ class Map1D(Map):
             data_index = self._selected_data
 
         # check whether a data or a micrograph or a fit parameter is selected
-        if data_index < len(self._data):
+        if data_index == 0:
+
+            return 'spectra'
+
+        elif data_index == 1:
+
+            return 'spectra --integral'
+
+        elif data_index == 2:
+
+            return 'spectra --mean'
+
+        elif data_index == 3:
+
+            return 'spectra --maximum'
+
+        elif 3 < data_index < 4 + len(self._data):
+
+            data_index -= 4
             # return data name
             return self._data_names[data_index]
 
         else:
 
+            data_index -= 4 + len(self._data)
+
             # return parameter name
-            data_index = data_index - len(self._data)
             parameters = []
             subscripts = [u'\u2081', u'\u2082', u'\u2083', u'\u2084', u'\u2085', u'\u2086']
             for i_peak in range(6):
@@ -429,9 +498,11 @@ class Map1D(Map):
             self._interval[1] = value
 
         # recalculate intensities
+        self._int_counts = numpy.sum(self._spectra[:, self._interval[0]:self._interval[1], 1], axis=1)
+        self._mean_energies = numpy.sum(self._spectra[:, self._interval[0]:self._interval[1], 0]*self._spectra[:, self._interval[0]:self._interval[1], 1], axis=1)/self._int_counts
+        max_pixels = numpy.argmax(self._spectra[:, self._interval[0]:self._interval[1], 1], axis=1)
         for ix in range(self._nx):
-            spectrum = self._spectra[ix, :, :]
-            self._data[0, ix] = numpy.sum(spectrum[self._interval[0]:self._interval[1], 1])
+            self._max_energies[ix] = self._spectra[ix, max_pixels[ix], 0]
 
         # emit signal
         self._app.interval_changed.emit(self._id)
@@ -447,8 +518,10 @@ class Map1D(Map):
         # update spectrum
         self._spectra[px, :, :] = spectrum
 
-        # update integrated counts
-        self._data[0, px] = numpy.sum(spectrum[:, 1])
+        self._int_counts[px] = numpy.sum(self._spectra[px, self._interval[0]:self._interval[1], 1])
+        self._mean_energies[px] = numpy.sum(self._spectra[px, self._interval[0]:self._interval[1], 0]*self._spectra[px, self._interval[0]:self._interval[1], 1])/self._int_counts[px]
+        max_pixel = numpy.argmax(self._spectra[px, self._interval[0]:self._interval[1], 1])
+        self._max_energies[px] = self._spectra[px, self._interval[0]+max_pixel, 0]
 
         # emit signal
         if 'emit' not in kwargs or kwargs['emit']:
@@ -472,9 +545,6 @@ class Map2D(Map):
 
         # set the map id
         self._id = map_id
-
-        # get the directory from path
-        dir_name = path.dirname(file_name)
 
         # check for the file type of the map
         # .dat files are acquired in the PGI9 (FZJ) lab using QTLab
@@ -508,24 +578,14 @@ class Map2D(Map):
         # set initial interval for the integration of the spectra
         self._interval = [0, self._resolution-1]
 
-        # check which columns are trivial (==0)
-        col_trivial = []
-        for i_data in range(len(self._data)):
-            if numpy.sum(self._data[i_data, :]) == 0:
-                col_trivial.append(i_data)
-
-        # delete trivial columns and data names
-        for i_col in range(len(col_trivial)-1, -1, -1):
-            del self._data_names[col_trivial[i_col]]
-            self._data = numpy.delete(self._data, col_trivial[i_col], 0)
-
-        # sort data names dictionary again
-        i_data = 0
-        data_names_new = {}
-        for key in self._data_names.keys():
-            data_names_new[i_data] = self._data_names[key]
-            i_data += 1
-        self._data_names = data_names_new
+        # get integrated counts, average energy and maximum energy
+        self._int_counts = numpy.sum(self._spectra[:, :, :, 1], axis=2)
+        self._mean_energies = numpy.sum(self._spectra[:, :, :, 0]*self._spectra[:, :, :, 1], axis=2)/self._int_counts
+        max_pixels = numpy.argmax(self._spectra[:, :, :, 1], axis=2)
+        self._max_energies = numpy.zeros((self._nx, self._ny))
+        for ix in range(self._nx):
+            for iy in range(self._ny):
+                self._max_energies[ix, iy] = self._spectra[ix, iy, max_pixels[ix, iy], 0]
 
         # create variables for the fit data
         self._fit_functions = numpy.zeros((self._nx, self._ny, 6))
@@ -541,6 +601,9 @@ class Map2D(Map):
         self._micrographs = {}
         self._micrograph_names = {}
 
+        # set selected data to integral
+        self._selected_data = 1
+
     def add_micrograph(self, file_name, micrograph):
 
         # obtain maximum key so far
@@ -554,7 +617,7 @@ class Map2D(Map):
         self._micrograph_names[int(max_key) + 1] = file_name
 
         # return the data id of the new micrograph
-        return len(self._data_names) + int(max_key) + 1
+        return 5 + len(self._data_names) + int(max_key)
 
     def clear_fit(self, **kwargs):
 
@@ -586,6 +649,11 @@ class Map2D(Map):
             # flip spectra
             self._spectra = numpy.flip(self._spectra, 0)
 
+            # flip data derived from spectra
+            self._int_counts = numpy.flip(self._int_counts, 0)
+            self._mean_energies = numpy.flip(self._mean_energies, 0)
+            self._max_energies = numpy.flip(self._max_energies, 0)
+
             # flip micrographs
             for i_micrograph in range(len(self._micrographs)):
                 self._micrographs[i_micrograph] = numpy.flip(self._micrographs[i_micrograph], 1)
@@ -609,6 +677,11 @@ class Map2D(Map):
 
             # flip spectra
             self._spectra = numpy.flip(self._spectra, 1)
+
+            # flip data derived from spectra
+            self._int_counts = numpy.flip(self._int_counts, 1)
+            self._mean_energies = numpy.flip(self._mean_energies, 1)
+            self._max_energies = numpy.flip(self._max_energies, 1)
 
             # flip micrographs
             for i_micrograph in range(len(self._micrographs)):
@@ -634,7 +707,51 @@ class Map2D(Map):
             data_index = self._selected_data
 
         # return a data
-        if data_index < len(self._data):
+        if data_index == 1:
+
+            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                return self._int_counts
+
+            elif kwargs['pixel'] == -2:
+
+                return self._int_counts[self._focus[0], self._focus[1]]
+
+            else:
+
+                return self._int_counts[kwargs['pixel'][0], kwargs['pixel'][1]]
+
+        elif data_index == 2:
+
+            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                return self._mean_energies
+
+            elif kwargs['pixel'] == -2:
+
+                return self._mean_energies[self._focus[0], self._focus[1]]
+
+            else:
+
+                return self._mean_energies[kwargs['pixel'][0], kwargs['pixel'][1]]
+
+        elif data_index == 3:
+
+            if 'pixel' not in kwargs.keys() or kwargs['pixel'] == -1:
+
+                return self._max_energies
+
+            elif kwargs['pixel'] == -2:
+
+                return self._max_energies[self._focus[0], self._focus[1]]
+
+            else:
+
+                return self._max_energies[kwargs['pixel'][0], kwargs['pixel'][1]]
+
+        elif 3 < data_index < 4 + len(self._data):
+
+            data_index -= 4
 
             # check if the whole map data (pixel = -1) or the focussed pixel (pixel = -2)
             # or a specific pixel (pixel = [x,y]) are requested
@@ -654,17 +771,17 @@ class Map2D(Map):
                 return self._data[data_index][kwargs['pixel'][0], kwargs['pixel'][1]]
 
         # return a micrograph
-        elif data_index < len(self._data) + len(self._micrographs):
+        elif 3 + len(self._data) < data_index < 4 + len(self._data) + len(self._micrographs):
 
             # return micrograph
-            data_index -= len(self._data)
+            data_index -= 4 + len(self._data)
             return self._micrographs[data_index]
 
         # return a fit data
         else:
-            
+
             # check which fit parameters are there
-            data_index -= len(self._data) + len(self._micrographs)
+            data_index -= 4 + len(self._data) + len(self._micrographs)
 
             # get fit functions and fit parameters once
             fit_functions = self._fit_functions
@@ -733,20 +850,34 @@ class Map2D(Map):
         else:
             data_index = self._selected_data
 
-        # check whether a data or a micrograph or a fit parameter is selected
-        if data_index < len(self._data):
-            # return data name
+        if data_index == 1:
+
+            return 'spectra --integral'
+
+        elif data_index == 2:
+
+            return 'spectra --mean'
+
+        elif data_index == 3:
+
+            return 'spectra --maximum'
+
+
+        elif 3 < data_index < 4 + len(self._data):
+
+            data_index -= 4
             return self._data_names[data_index]
 
-        elif data_index < len(self._data) + len(self._micrographs):
+        elif 3 + len(self._data) < data_index < 4 + len(self._data) + len(self._micrographs):
 
-            # return micrograph name
-            return self._micrograph_names[data_index - len(self._data)]
+            data_index -= 4 + len(self._data)
+            return self._micrograph_names[data_index]
 
         else:
 
-            # return parameter name
-            data_index = data_index - len(self._data)-len(self._micrographs)
+            # check which fit parameters are there
+            data_index -= 4 + len(self._data) + len(self._micrographs)
+
             parameters = []
             subscripts = [u'\u2081', u'\u2082', u'\u2083', u'\u2084', u'\u2085', u'\u2086']
             for i_peak in range(6):
@@ -771,9 +902,9 @@ class Map2D(Map):
         else:
             px = kwargs['pixel'][0]
             py = kwargs['pixel'][1]
-            
+
         return self._fit_functions[px, py, :], self._fit_initial_parameters[px, py, :, :], self._fit_optimized_parameters[px, py, :, :]
-        
+
     def get_fit_functions(self, **kwargs):
 
         # if no pixel was provided return the whole fit functions array
@@ -837,6 +968,14 @@ class Map2D(Map):
             self._spectra = numpy.swapaxes(self._spectra, 0, 1)
             self._spectra = numpy.flip(self._spectra, 1)
 
+            # rotate data derived from spectra
+            self._int_counts = numpy.swapaxes(self._int_counts, 0, 1)
+            self._int_counts = numpy.flip(self._int_counts, 1)
+            self._mean_energies = numpy.swapaxes(self._mean_energies, 0, 1)
+            self._mean_energies = numpy.flip(self._mean_energies, 1)
+            self._max_energies = numpy.swapaxes(self._max_energies, 0, 1)
+            self._max_energies = numpy.flip(self._max_energies, 1)
+
             # rotate micrographs
             for i_micrograph in range(len(self._micrographs)):
                 self._micrographs[i_micrograph] = numpy.swapaxes(self._micrographs[i_micrograph], 0, 1)
@@ -873,6 +1012,14 @@ class Map2D(Map):
             # rotate spectra
             self._spectra = numpy.swapaxes(self._spectra, 0, 1)
             self._spectra = numpy.flip(self._spectra, 0)
+
+            # rotate data derived from spectra
+            self._int_counts = numpy.swapaxes(self._int_counts, 0, 1)
+            self._int_counts = numpy.flip(self._int_counts, 0)
+            self._mean_energies = numpy.swapaxes(self._mean_energies, 0, 1)
+            self._mean_energies = numpy.flip(self._mean_energies, 0)
+            self._max_energies = numpy.swapaxes(self._max_energies, 0, 1)
+            self._max_energies = numpy.flip(self._max_energies, 0)
 
             # rotate micrographs
             for i_micrograph in range(len(self._micrographs)):
@@ -971,11 +1118,13 @@ class Map2D(Map):
         elif side == 'right':
             self._interval[1] = value
 
-        # recalculate intensities
+        # recalculate data
+        self._int_counts = numpy.sum(self._spectra[:, :, self._interval[0]:self._interval[1], 1], axis=2)
+        self._mean_energies = numpy.sum(self._spectra[:, :, self._interval[0]:self._interval[1], 0]*self._spectra[:, :, self._interval[0]:self._interval[1], 1], axis=2)/self._int_counts
+        max_pixels = numpy.argmax(self._spectra[:, :, self._interval[0]:self._interval[1], 1], axis=2)
         for ix in range(self._nx):
             for iy in range(self._ny):
-                spectrum = self._spectra[ix, iy, :, :]
-                self._data[0, ix, iy] = numpy.sum(spectrum[self._interval[0]:self._interval[1], 1])
+                self._max_energies[ix, iy] = self._spectra[ix, iy, self._interval[0]+max_pixels[ix, iy], 0]
 
         # emit signal
         self._app.interval_changed.emit(self._id)
@@ -993,8 +1142,11 @@ class Map2D(Map):
         # update spectrum
         self._spectra[px, py, :, :] = spectrum
 
-        # update integrated counts
-        self._data[0, px, py] = numpy.sum(spectrum[:, 1])
+        # update derived data
+        self._int_counts[px, py] = numpy.sum(self._spectra[px, py, self._interval[0]:self._interval[1], 1])
+        self._mean_energies[px, py] = numpy.sum(self._spectra[px, py, self._interval[0]:self._interval[1], 0]*self._spectra[px, py, self._interval[0]:self._interval[1], 1])/self._int_counts[px, py]
+        max_pixel = numpy.argmax(self._spectra[px, py, self._interval[0]:self._interval[1], 1])
+        self._max_energies[px, py] = self._spectra[px, py, self._interval[0]+max_pixel, 0]
 
         # emit signal
         if 'emit' not in kwargs or kwargs['emit']:

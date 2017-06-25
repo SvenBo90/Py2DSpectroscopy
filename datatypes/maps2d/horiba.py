@@ -72,3 +72,4 @@ class Horiba2D:
                 i_px += 1
 
         return map_name, spectra, data_names, data
+    
