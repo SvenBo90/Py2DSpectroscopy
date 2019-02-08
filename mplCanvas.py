@@ -1,5 +1,5 @@
 # general imports
-from PyQt5.QtWidgets import QApplication, QDialog, QInputDialog, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QDialog, QGridLayout, QInputDialog, QSizePolicy
 from PyQt5.QtGui import QIcon
 import numpy
 import os
@@ -71,10 +71,8 @@ class MapCanvas1D(PlotCanvas):
         self._extent = [self._map.get_resolution(), self._map.get_size()[0]]
 
         # create figure
-        app_dpi_x = float(QApplication.desktop().physicalDpiX())
-        app_dpi_y = float(QApplication.desktop().physicalDpiY())
-        self._fig = Figure(figsize=(600./app_dpi_x, 350./app_dpi_y), dpi=app_dpi_x)
-        self._fig.set_facecolor('#f7f6f6')
+        self._fig = Figure()
+        self._fig.set_facecolor('none')
 
         # create a grid for plot and colorbar
         gs = gridspec.GridSpec(1, 2, width_ratios=[10, 1])
@@ -104,13 +102,9 @@ class MapCanvas1D(PlotCanvas):
         FigureCanvas.__init__(self, self._fig)
 
         # set parent widget
-        self.setParent(parent)
-
-        # set size policy
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        # update geometry
-        FigureCanvas.updateGeometry(self)
+        self.grid_layout = QGridLayout(parent)
+        self.grid_layout.setObjectName("gridLayout")
+        self.grid_layout.addWidget(self, 0, 0, 1, 1)
 
         self._fig.canvas.draw()
 
@@ -233,7 +227,7 @@ class MapCanvas1D(PlotCanvas):
             self._map_plot_1d, = self._axes.plot(data, range(self._extent[1]), color='black')
 
             # set axes limits
-            self._axes.set_xlim([numpy.min(data), numpy.max(data)])
+            self._axes.set_xlim([numpy.min(data[~numpy.isnan(data)]), numpy.max(data[~numpy.isnan(data)])])
             if not fix_limits:
                 self._axes.set_ylim([-0.5, self._extent[1] - 0.5])
             else:
@@ -268,10 +262,8 @@ class MapCanvas2D(PlotCanvas):
         self._extent = self._map.get_size()
 
         # create figure
-        app_dpi_x = float(QApplication.desktop().physicalDpiX())
-        app_dpi_y = float(QApplication.desktop().physicalDpiY())
-        self._fig = Figure(figsize=(600./app_dpi_x, 350./app_dpi_y), dpi=app_dpi_x)
-        self._fig.set_facecolor('#f7f6f6')
+        self._fig = Figure()
+        self._fig.set_facecolor('none')
 
         # create a grid for plot and colorbar
         gs = gridspec.GridSpec(1, 2, width_ratios=[10, 1])
@@ -301,13 +293,9 @@ class MapCanvas2D(PlotCanvas):
         FigureCanvas.__init__(self, self._fig)
 
         # set parent widget
-        self.setParent(parent)
-
-        # set size policy
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        # update geometry
-        FigureCanvas.updateGeometry(self)
+        self.grid_layout = QGridLayout(parent)
+        self.grid_layout.setObjectName("gridLayout")
+        self.grid_layout.addWidget(self, 0, 0, 1, 1)
 
         # draw canvas
         self._fig.canvas.draw()
@@ -530,7 +518,7 @@ class MicrographCanvas(PlotCanvas):
         app_dpi_x = float(QApplication.desktop().physicalDpiX())
         app_dpi_y = float(QApplication.desktop().physicalDpiX())
         self._fig = Figure(figsize=(940. / app_dpi_x, 350. / app_dpi_y), dpi=app_dpi_x)
-        self._fig.set_facecolor('#F2F1F0')
+        self._fig.set_facecolor('none')
 
         # create a grid for plot and colorbar
         gs = gridspec.GridSpec(1, 2, width_ratios=[1, 1])
@@ -564,10 +552,9 @@ class MicrographCanvas(PlotCanvas):
         FigureCanvas.__init__(self, self._fig)
 
         # set parent widget
-        self.setParent(parent)
-
-        # set size policy
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.grid_layout = QGridLayout(parent)
+        self.grid_layout.setObjectName("gridLayout")
+        self.grid_layout.addWidget(self, 0, 0, 1, 1)
 
         # update geometry
         FigureCanvas.updateGeometry(self)
@@ -644,10 +631,8 @@ class SpectrumCanvas(PlotCanvas):
         self._map = map_handle
 
         # create figure
-        app_dpi_x = float(QApplication.desktop().physicalDpiX())
-        app_dpi_y = float(QApplication.desktop().physicalDpiX())
-        self._fig = Figure(figsize=(460. / app_dpi_x, 285. / app_dpi_y), dpi=app_dpi_x)
-        self._fig.set_facecolor('#F2F1F0')
+        self._fig = Figure()
+        self._fig.set_facecolor('#efefef')
 
         # create axes for spectrum plot
         self._axes = self._fig.add_subplot(111)
@@ -681,13 +666,12 @@ class SpectrumCanvas(PlotCanvas):
         FigureCanvas.__init__(self, self._fig)
 
         # set parent widget
-        self.setParent(parent)
+        self.grid_layout = QGridLayout(parent)
+        self.grid_layout.setObjectName("gridLayout")
+        self.grid_layout.addWidget(self, 0, 0, 1, 1)
 
-        # set size policy
-        FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        # update geometry
-        FigureCanvas.updateGeometry(self)
+        # draw canvas
+        self._fig.canvas.draw()
 
     def add_toolbar(self, parent):
 

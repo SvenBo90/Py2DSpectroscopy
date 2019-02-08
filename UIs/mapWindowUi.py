@@ -1,6 +1,5 @@
 # import PyQt5 elements
-from PyQt5.QtCore import QRect
-from PyQt5.QtWidgets import QAction, QTabWidget, QWidget
+from PyQt5.QtWidgets import QAction, QTabWidget, QWidget, QGridLayout
 
 
 class UiMapWindow(object):
@@ -20,16 +19,22 @@ class UiMapWindow(object):
         # central widget
         self.central_widget = QWidget(map_window)
         self.central_widget.setObjectName("central_widget")
-        map_window.setCentralWidget(self.central_widget)
 
         # tab widget
         self.tab_widget = QTabWidget(self.central_widget)
-        self.tab_widget.setGeometry(QRect(10, 10, 620, 440))
         self.tab_widget.setTabPosition(QTabWidget.North)
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.setMovable(True)
         self.tab_widget.setObjectName("tab_widget")
         self.tab_widget.setCurrentIndex(-1)
+
+        # grid layout
+        self.grid_layout = QGridLayout(self.central_widget)
+        self.grid_layout.setObjectName("grid_layout")
+        self.grid_layout.addWidget(self.tab_widget, 0, 0, 1, 1)
+
+        # set central widget
+        map_window.setCentralWidget(self.central_widget)
 
         # menu
         self.menu_bar = map_window.menuBar()

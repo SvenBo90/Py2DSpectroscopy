@@ -2,7 +2,7 @@
 import numpy
 # import PyQt5 elements
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
+from PyQt5.QtWidgets import QApplication, QGridLayout, QMainWindow, QWidget
 # import fit functions
 import fitting
 # import spectrum canvas
@@ -175,9 +175,14 @@ class SpectrumWindow(QMainWindow):
         self._spectrum_widgets = {}
         self._current_widget = None
 
-        # set fixed size
-        self.setFixedWidth(480)
-        self.setFixedHeight(415)
+        # central widget
+        self.central_widget = QWidget(self)
+        self.central_widget.setObjectName("central_widget")
+        self.setCentralWidget(self.central_widget)
+
+        # grid layout
+        self.grid_layout = QGridLayout(self.central_widget)
+        self.grid_layout.setObjectName("grid_layout")
 
         # set window title
         self.setWindowTitle("Spectrum")
@@ -189,6 +194,7 @@ class SpectrumWindow(QMainWindow):
 
         # add a widget to the widgets list
         self._spectrum_widgets[map_handle.get_id()] = SpectrumWidget(self, map_handle)
+        self.grid_layout.addWidget(self._spectrum_widgets[map_handle.get_id()])
 
     def change_widget(self, map_id):
 

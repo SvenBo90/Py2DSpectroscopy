@@ -118,12 +118,9 @@ class Py2DSpectroscopy(QApplication):
 
     def live_plotting(self):
 
-        print(threading.currentThread().getName(), 'Starting')
         while not threading.current_thread().stopped():
-            print(threading.currentThread().getName(), 'Working')
             time.sleep(0.5)
             self.windows['mapWindow'].update_data(self.maps.get_selected_map().get_id())
-            print(threading.current_thread().stopped())
         self.windows['mapWindow'].update_data(self.maps.get_selected_map().get_id())
 
     def start_live_plotting(self):
@@ -139,6 +136,7 @@ class Py2DSpectroscopy(QApplication):
     def exit_app():
 
         print('Thanks for using me!')
+
 
 if __name__ == "__main__":
 

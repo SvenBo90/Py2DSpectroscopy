@@ -21,6 +21,7 @@ class QtLab2D:
         file_data = numpy.loadtxt(self._file_name)
 
         # read the number of pixels and check for consistency
+        print(file_data)
         nx = int(file_data[-1, 1]) + 1
         ny = int(file_data[-1, 2]) + 1
         if nx * ny < file_data.shape[0]:

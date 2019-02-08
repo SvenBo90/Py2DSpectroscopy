@@ -2,7 +2,7 @@
 import numpy
 # import PyQt5 elements
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QWidget
+from PyQt5.QtWidgets import QApplication, QGridLayout, QMainWindow, QTableWidgetItem, QWidget
 # import UI
 from UIs.pixelInformationWidgetUi import UiPixelInformationWidget
 
@@ -22,10 +22,6 @@ class PixelInformationWidget(QWidget):
 
         # load and set up UI
         self.ui = UiPixelInformationWidget(self)
-
-        # set fixed size
-        self.setFixedWidth(320)
-        self.setFixedHeight(240)
 
     def clear(self):
 
@@ -211,9 +207,14 @@ class PixelInformationWindow(QMainWindow):
         self._pixel_information_widgets = {}
         self._current_widget = None
 
-        # set fixed size
-        self.setFixedWidth(320)
-        self.setFixedHeight(240)
+        # central widget
+        self.central_widget = QWidget(self)
+        self.central_widget.setObjectName("central_widget")
+        self.setCentralWidget(self.central_widget)
+
+        # grid layout
+        self.grid_layout = QGridLayout(self.central_widget)
+        self.grid_layout.setObjectName("grid_layout")
 
         # set window title
         self.setWindowTitle("Pixel Information")
@@ -225,6 +226,7 @@ class PixelInformationWindow(QMainWindow):
 
         # add a widget to the widgets list
         self._pixel_information_widgets[map_handle.get_id()] = PixelInformationWidget(self, map_handle)
+        self.grid_layout.addWidget(self._pixel_information_widgets[map_handle.get_id()])
 
     def change_widget(self, map_id):
 
@@ -238,6 +240,7 @@ class PixelInformationWindow(QMainWindow):
         # make the widget for the select map visible
         self._pixel_information_widgets[map_handle.get_id()].setVisible(True)
         self._current_widget = self._pixel_information_widgets[map_handle.get_id()]
+
 
     def get_current_widget(self):
 

@@ -2,6 +2,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget
 # import UI
 from UIs.aboutWindowUi import UiAbout
+from UIs.pixelInformationWidgetUi import UiPixelInformationWidget
 
 
 class AboutWindow(QMainWindow):

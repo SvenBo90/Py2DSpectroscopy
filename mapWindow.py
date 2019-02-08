@@ -1,13 +1,12 @@
 # general imports
 from os import path
-import numpy
 from matplotlib import image
+import numpy
 from skimage import transform
 import webbrowser
 # import PyQt5 elements
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog, QMainWindow, QMessageBox, \
-    QProgressDialog, QWidget
+from PyQt5.QtWidgets import QApplication, QFileDialog, QInputDialog, QMainWindow, QMessageBox, QProgressDialog, QWidget
 # import UI
 from UIs.mapWindowUi import UiMapWindow
 from UIs.mapTabWidgetUi import UiMapTabWidget
@@ -15,6 +14,7 @@ from addMicrographDialog import AddMicrographDialog
 from exportDialog import ExportDialog
 # import map canvas
 from mplCanvas import MapCanvas1D, MapCanvas2D
+
 
 class MapTab(QWidget):
 
@@ -254,10 +254,6 @@ class MapWindow(QMainWindow):
 
         # load and set up UI
         self.ui = UiMapWindow(self)
-
-        # set fixed size
-        self.setFixedWidth(640)
-        self.setFixedHeight(480)
 
         # link actions for the file menu
         self.ui.action_1d_map.triggered.connect(self.cb_action1d_map)
