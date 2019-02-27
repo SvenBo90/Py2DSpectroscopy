@@ -7,6 +7,7 @@ import pickle
 # datatype imports
 from datatypes.maps1d.qtlab import QtLab1D
 from datatypes.maps2d.qtlab import QtLab2D
+from datatypes.maps2d.qcodes import QCoDeS2D
 from datatypes.maps2d.horiba import Horiba2D
 from datatypes.maps2d.vuckovic import Vuckovic2D
 
@@ -551,7 +552,7 @@ class Map2D(Map):
         if file_name[-4:] == '.dat':
 
             # define map loader
-            map_loader = QtLab2D(file_name)
+            map_loader = QCoDeS2D(file_name)
 
         # .txt files are acquired by the Horiba machine in the Heinz Group at Stanford
         elif file_name[-4:] == '.txt':
