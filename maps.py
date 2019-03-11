@@ -6,6 +6,7 @@ import numpy
 import pickle
 # datatype imports
 from datatypes.maps1d.qtlab import QtLab1D
+from datatypes.maps1d.qcodes import QCoDeS1D
 from datatypes.maps2d.qtlab import QtLab2D
 from datatypes.maps2d.qcodes import QCoDeS2D
 from datatypes.maps2d.horiba import Horiba2D
@@ -122,6 +123,11 @@ class Map1D(Map):
 
             # define map loader
             map_loader = QtLab1D(file_name)
+
+        elif file_name[-4:] == '.pck':
+
+            # define map loader
+            map_loader = QCoDeS1D(file_name)
 
         # load data
         self._map_name, self._spectra, self._data_names, self._data = map_loader.load_data()
@@ -550,6 +556,12 @@ class Map2D(Map):
         # check for the file type of the map
         # .dat files are acquired in the PGI9 (FZJ) lab using QTLab
         if file_name[-4:] == '.dat':
+
+            # define map loader
+            map_loader = QtLab2D(file_name)
+
+        # .txt files are acquired by the Horiba machine in the Heinz Group at Stanford
+        elif file_name[-4:] == '.pck':
 
             # define map loader
             map_loader = QCoDeS2D(file_name)
